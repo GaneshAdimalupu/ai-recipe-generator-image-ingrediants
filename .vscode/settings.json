@@ -1,0 +1,5 @@
+{
+  "python.analysis.extraPaths": [
+    "./streamlit_login_auth_ui"
+  ]
+}
