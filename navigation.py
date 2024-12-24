@@ -5,42 +5,49 @@ from streamlit.source_util import get_pages
 
 
 def get_current_page_name():
+    """Retrieve the name of the currently running Streamlit page."""
     ctx = get_script_run_ctx()
     if ctx is None:
-        raise RuntimeError("Couldn't get script context")
+        return "streamlit_app"
 
-    pages = get_pages("")
-
-    return pages[ctx.page_script_hash]["page_name"]
+    # Match the hash of the current script with known pages
+    pages = st.session_state.get("pages", {})
+    for key, value in pages.items():
+        if value.get("page_script_hash") == ctx.page_script_hash:
+            return value["page_name"]
+    return "streamlit_app"
 
 
 def make_sidebar():
+    """Create the sidebar for navigation and user actions."""
     with st.sidebar:
         st.title("💎 Be My Chef AI")
-        st.write("")
-        st.write("")
-        st.write("")
+        st.write("AI-Powered Recipe Assistance")
 
+        # Logged-in user navigation
         if st.session_state.get("logged_in", False):
-            st.page_link("pages/home.py", label="Recipe AI Model", icon="👩🏻‍🍳")
-            st.page_link("pages/page1.py", label="Secret Company Stuff", icon="🔒")
-            st.page_link("pages/page2.py", label="More Secret Stuff", icon="🕵️")
+            st.write("### Navigation")
+            if st.button("Recipe AI Model 👩🏻‍🍳"):
+                st.switch_page("pages/home.py")
+            if st.button("Posts Page 📝"):
+                st.switch_page("pages/posts.py")
+            if st.button("More Secret Stuff 🕵️"):
+                st.switch_page("pages/page2.py")
 
-            st.write("")
-            st.write("")
-            st.write("")
-
-            if st.button("Log out"):
+            st.markdown("---")
+            if st.button("Log out 🔓"):
                 logout()
-
-        elif get_current_page_name() != "streamlit_app":
-            # If anyone tries to access a secret page without being logged in,
-            # redirect them to the login page
-            st.switch_page("streamlit_app.py")
+        else:
+            # Redirect to login if not logged in
+            current_page = get_current_page_name()
+            if current_page != "streamlit_app":
+                st.warning("You need to log in to access this page.")
+                st.experimental_set_page("streamlit_app")
 
 
 def logout():
+    """Handle user logout."""
     st.session_state.logged_in = False
-    st.info("Logged out successfully!")
+    st.success("Logged out successfully!")
     sleep(0.5)
-    st.switch_page("streamlit_app.py")
+    st.experimental_set_page("streamlit_app")

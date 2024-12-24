@@ -12,20 +12,28 @@ from navigation import make_sidebar
 
 make_sidebar()
 
-st.title("Welcome to Be My Chef AI")
+# Check if user is logged in
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-st.write("Please log in to continue (username `test`, password `test`).")
+# Handle authentication
+if not st.session_state.logged_in:
+    st.title("Welcome to Be My Chef AI")
+    st.write("Please log in to continue (username `test`, password `test`).")
 
-username = st.text_input("Username")
-password = st.text_input("Password", type="password")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
-if st.button("Log in", type="primary"):
-    if username == "test" and password == "test":
-        st.session_state.logged_in = True
-        st.success("Logged in successfully!")
-        sleep(0.5)
-        # st.switch_page("pages/page1.py")
-        st.switch_page("pages/home.py")
+    if st.button("Log in", type="primary"):
+        if username == "test" and password == "test":
+            st.session_state.logged_in = True
+            st.success("Logged in successfully!")
+            sleep(0.5)
+            # st.switch_page("pages/page1.py")
+            st.switch_page("pages/home.py")
+        else:
+            st.error("Incorrect username or password")
+else:
+    st.title("Welcome to Be My Chef AI")
+    st.success("You are logged in!")
 
-    else:
-        st.error("Incorrect username or password")

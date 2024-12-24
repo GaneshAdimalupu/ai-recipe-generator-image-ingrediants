@@ -103,8 +103,6 @@ Open the Local URL in your web browser to interact with the app.
 
 ## Evaluation
 
-...
-
 ### Result
 
 Since the test set is not available, we will evaluate the model based on a shared test set. This test set consists of 5% of the whole test (_= 5,000 records_),
@@ -118,11 +116,7 @@ The following table summarizes the scores obtained by the **Chef Transformer** a
 
 _From the 5 generated recipes corresponding to each NER (food items), only the highest score was taken into account in the WER, COSIM, and ROUGE metrics. At the same time, BLEU, GLEU, Meteor were designed to have many possible references._
 
-## Streamlit demo
 
-```bash
-streamlit run app.py
-```
 
 ## Looking to contribute?
 
@@ -137,21 +131,6 @@ Special thanks to those who provided these fantastic materials.
 - [Moira Nazzari](https://pixabay.com/photos/food-dessert-cake-eggs-butter-3048440/)
 - [Instagram Post](https://www.freepik.com/free-psd/recipes-ad-social-media-post-template_11520617.htm)
 
-## **Dependencies**
-
-Ensure all dependencies are installed by running:
-
-```bash
-pip install -r requirements.txt
-```
-
-Key dependencies include:
-
-- Streamlit: For building the web interface.
-- PyTorch: Deep learning framework for model implementation.
-- Transformers: For utilizing Transformer models.
-- Pillow: Image processing.
-- Torchvision: For image transformations and pre-trained models.
 
 ## **Performance Tips**
 
