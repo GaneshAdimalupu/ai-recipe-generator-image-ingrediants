@@ -7,10 +7,14 @@ import urllib.parse  # Import the URL parsing library
 # Load environment variables
 load_dotenv()
 
+import streamlit as st
+
 
 def get_database():
     # Retrieve the MongoDB URI from the .env file
-    uri = os.getenv("MONGODB_URI")
+    # uri = os.getenv("MONGODB_URI")
+    uri = st.secrets["mongo"]["MONGODB_URI"]
+
     if not uri:
         raise ValueError("MONGODB_URI is not set in the environment variables.")
 
