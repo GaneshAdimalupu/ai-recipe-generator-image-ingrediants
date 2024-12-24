@@ -61,6 +61,7 @@ protobuf==5.29.2
 pyarrow==18.1.0
 pydeck==0.9.1
 Pygments==2.18.0
+pymongo==4.8.0
 pyparsing==3.2.0
 python-dateutil==2.9.0.post0
 pytz==2024.2
