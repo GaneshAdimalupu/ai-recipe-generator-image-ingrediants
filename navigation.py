@@ -31,8 +31,10 @@ def make_sidebar():
                 st.switch_page("pages/home.py")
             if st.button("Posts Page 📝"):
                 st.switch_page("pages/posts.py")
-            if st.button("More Secret Stuff 🕵️"):
-                st.switch_page("pages/page2.py")
+            if st.button("Chatbot"):
+                st.switch_page("pages/chatbot.py")
+            if st.button("Search Engine"):
+                st.switch_page("pages/search.py")
 
             st.markdown("---")
             if st.button("Log out 🔓"):
