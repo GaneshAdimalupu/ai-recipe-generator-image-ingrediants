@@ -1,39 +1,44 @@
 import streamlit as st
 
-# 1. Set the page configuration **immediately after imports**
+
+# 1. Set the page configuration
 st.set_page_config(
     page_title="Be My Chef AI",
     page_icon="🍲",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
 from time import sleep
-from navigation import make_sidebar
+from login_auth_ui.widgets import __login__
 
-make_sidebar()
+# 2. Initialize the login widget
+__login__obj = __login__(
+    auth_token="courier_auth_token",
+    company_name="Be My Chef AI",
+    width=200,
+    height=250,
+    logout_button_name="Logout",
+    hide_menu_bool=False,
+    hide_footer_bool=False,
+    lottie_url="https://assets2.lottiefiles.com/packages/lf20_jcikwtux.json",
+)
 
-# Check if user is logged in
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+LOGGED_IN = __login__obj.build_login_ui()
+username = __login__obj.get_username()
 
-# Handle authentication
-if not st.session_state.logged_in:
-    st.title("Welcome to Be My Chef AI")
-    st.write("Please log in to continue (username `test`, password `test`).")
+# 3. After successful login
+if LOGGED_IN:
+    # Save username to session state
+    # st.session_state["username"] = username
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    # Display a welcome message
+    # st.title(f"Welcome, {username}!")
+    st.success("You are now logged in!")
 
-    if st.button("Log in", type="primary"):
-        if username == "test" and password == "test":
-            st.session_state.logged_in = True
-            st.success("Logged in successfully!")
-            sleep(0.5)
-            # st.switch_page("pages/page1.py")
-            st.switch_page("pages/home.py")
-        else:
-            st.error("Incorrect username or password")
+    # Navigate to the home page
+    sleep(0.5)
+    st.switch_page("pages/home.py")  # Ensure 'home.py' exists in the 'pages' directory
 else:
-    st.title("Welcome to Be My Chef AI")
-    st.success("You are logged in!")
+    st.warning("Please log in to access the application.")
 

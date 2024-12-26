@@ -1,73 +1,89 @@
 import streamlit as st
 from transformers import pipeline
 from datetime import datetime
-
+from pymongo import MongoClient
+from mongodb.db import get_database
 from navigation import make_sidebar
 
 make_sidebar()
 
-# Initialize the GPT model (you can replace with another model like T5, GPT-2, etc.)
-# Force the model to load on CPU
+# Connect to MongoDB
+db = get_database()
+conversation = db["conversation"]
+
+# Initialize GPT model
 generator = pipeline("text-generation", model="gpt2", device=-1)
 
-
-# Title of the app
+# App Title
 st.title("Recipe Generator 🍳")
 
-# Introduction text
+# Introduction
 st.markdown(
     """
     Welcome to the Recipe Generator! 🍲
-    - You can ask for recipes based on ingredients or specify the type of recipe you'd like.
-    - Just type your request below and let the AI generate the recipe for you!
-    - You can continue interacting with the app, asking for different recipes or changing your ingredients.
+    - Enter ingredients or a recipe idea, and let the AI create a recipe for you!
 """
 )
 
 
-# Function to generate recipe based on the user input
+# Function to generate recipe
 def generate_recipe(query):
-    # Generate text based on the input query (you can tweak the prompt for better results)
     prompt = f"Create a recipe based on the following: {query}"
     result = generator(prompt, max_length=150, num_return_sequences=1)
     return result[0]["generated_text"]
 
 
-# Initialize session state for conversation history
+# Session State Initialization
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
 
-# User input for recipe request
+# User Input
 user_input = st.text_input("Enter your recipe request or ingredients:")
 
-# Process the user input and update the conversation
 if user_input:
     # Get the current timestamp
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Add user query to the conversation history with timestamp
+    # Save conversation locally and in MongoDB
     st.session_state.conversation.append(
         {"role": "User", "message": user_input, "timestamp": current_time}
     )
-
-    # Generate recipe based on user input
-    recipe = generate_recipe(user_input)
-
-    # Add generated recipe to conversation history with timestamp
-    st.session_state.conversation.append(
-        {"role": "AI", "message": recipe, "timestamp": current_time}
+    conversation.insert_one(
+        {
+            "user": "Anonymous",  # Replace with actual user data if applicable
+            "content": user_input,
+            "time": current_time,
+        }
     )
 
-# Display the conversation (history of user queries and AI responses)
-for conversation in st.session_state.conversation:
-    st.markdown(
-        f"**{conversation['role']} ({conversation['timestamp']}):** {conversation['message']}"
-    )
-    st.markdown(
-        "---"
-    )  # Add a line after each message to differentiate the conversation
+    # Generate and store AI response
+    try:
+        recipe = generate_recipe(user_input)
+        st.session_state.conversation.append(
+            {"role": "AI", "message": recipe, "timestamp": current_time}
+        )
+    except Exception as e:
+        recipe = f"Error generating recipe: {e}"
+        st.session_state.conversation.append(
+            {"role": "AI", "message": recipe, "timestamp": current_time}
+        )
 
-# Option to clear the session state
+# Display Conversation
+for convo in st.session_state.conversation:
+    st.markdown(f"**{convo['role']} ({convo['timestamp']}):** {convo['message']}")
+    st.markdown("---")
+
 if st.button("Clear Conversation"):
     st.session_state.conversation = []
-    st.rerun()
+    st.experimental_rerun()
+
+# Display Recent Posts from MongoDB
+st.write("## 📰 Recent Posts")
+all_conversation = list(conversation.find().sort("time", -1))
+if all_conversation:
+    for conv in all_conversation:
+        st.write(f"### Anonymous said:")
+        st.write(conv["content"])
+        st.write(f"🕒 Asked on: {conv['time']}")
+        st.write("---")
+else:
+    st.info("No posts yet. Be the first to post!")

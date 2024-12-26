@@ -25,7 +25,7 @@ def make_sidebar():
         st.write("AI-Powered Recipe Assistance")
 
         # Logged-in user navigation
-        if st.session_state.get("logged_in", False):
+        if st.session_state.get("logged_in", True):
             st.write("### Navigation")
             if st.button("Recipe AI Model 👩🏻‍🍳"):
                 st.switch_page("pages/home.py")
