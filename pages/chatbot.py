@@ -3,9 +3,24 @@ from transformers import pipeline
 from datetime import datetime
 from pymongo import MongoClient
 from mongodb.db import get_database
-from navigation import make_sidebar
 
-make_sidebar()
+from pages.widgets import __login__
+
+# Initialize login UI
+login_ui = __login__(
+    auth_token="your_courier_auth_token",
+    company_name="Be My Chef AI",
+    width=200,
+    height=200,
+)
+
+# Check if user is logged in and show navigation
+if not st.session_state.get("LOGGED_IN", False):
+    st.switch_page("streamlit_app.py")
+else:
+    # Show navigation sidebar
+    login_ui.nav_sidebar()
+
 
 # Connect to MongoDB
 db = get_database()

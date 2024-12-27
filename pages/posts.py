@@ -1,18 +1,29 @@
 import streamlit as st
 from datetime import datetime
 from mongodb.db import get_database
+from pages.widgets import __login__
+
+# Initialize login UI
+login_ui = __login__(
+    auth_token="your_courier_auth_token",
+    company_name="Be My Chef AI",
+    width=200,
+    height=200,
+)
+
+# Check if user is logged in and show navigation
+if not st.session_state.get("LOGGED_IN", False):
+    st.switch_page("streamlit_app.py")
+else:
+    # Show navigation sidebar
+    login_ui.nav_sidebar()
+
+
 
 # Connect to MongoDB
 db = get_database()
 posts_collection = db["posts"]  # Collection for posts
 
-from navigation import make_sidebar
-make_sidebar()
-
-# Ensure only logged-in users can access this page
-if "logged_in" not in st.session_state or not st.session_state.logged_in:
-    st.warning("Please log in to access this page.")
-    st.stop()
 
 # Title of the page
 st.title("Posts Page 📝")
