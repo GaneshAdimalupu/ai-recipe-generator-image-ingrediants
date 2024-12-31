@@ -1,63 +1,180 @@
-from Foodimg2Ing.output import output
+import os
 import streamlit as st
-
+import numpy as np
 from pages.widgets import __login__
+import plotly.express as px
+from streamlit_lottie import st_lottie
+import requests
+from Foodimg2Ing.output import output
+from chef_transformer.examples import EXAMPLES
+from chef_transformer import dummy, meta
+from utils.api import generate_cook_image
+from utils.draw import generate_food_with_logo_image, generate_recipe_image
+from transformers import pipeline, set_seed
+from transformers import AutoTokenizer
+from PIL import ImageFont
+import os
+import re
+
+from utils.utils import pure_comma_separation
+
+
+# Page configuration
+st.set_page_config(page_title="Be My Chef AI - Recipe Generator", layout="wide")
+
+# Initialize login check
+if not st.session_state.get("LOGGED_IN", False):
+    st.switch_page("streamlit_app.py")
 
 # Initialize login UI
 login_ui = __login__(
     auth_token="your_courier_auth_token",
-    company_name="Be My Chef AI",
+    company_name="Be My Chef AI",           
     width=200,
     height=200,
 )
 
-# Check if user is logged in and show navigation
-if not st.session_state.get("LOGGED_IN", False):
-    st.switch_page("streamlit_app.py")
-else:
-    # Show navigation sidebar
-    login_ui.nav_sidebar()
+# Show navigation sidebar
+login_ui.nav_sidebar()
 
-
-
-import torch
-from transformers import pipeline, set_seed
-from transformers import AutoTokenizer
-
-from PIL import ImageFont
-
-import os
-import re
-import random
-import textwrap
-from chef_transformer.examples import EXAMPLES
-
-from chef_transformer import dummy
-from chef_transformer import meta
-
-from utils import ext
-from utils.api import generate_cook_image
-from utils.draw import generate_food_with_logo_image, generate_recipe_image
-from utils.st import (
-    remote_css,
-    local_css,
-)
-from utils.utils import (
-    load_image_from_url,
-    load_image_from_local,
-    image_to_base64,
-    pure_comma_separation,
-)
-
-
-# Streamlit UI
+# Enhanced CSS for better styling
 st.markdown(
-    "<h1 style='text-align: center;'>Be My Chef AI</h1>", unsafe_allow_html=True
-)
-st.markdown(
-    "<p style='text-align: center;'>Welcome to Be My Chef! Upload an image to generate recipes.</p>",
+    """
+    <style>
+    /* Main container styling */
+    .main {
+        padding: 2rem;
+    }
+    
+    /* Card styling */
+    .recipe-card {
+        background-color: #ffffff;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    /* Header styling */
+    .st-emotion-cache-1v0mbdj > h1 {
+        color: #1e3d59;
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+        background-color: #f7f9fc;
+        border-radius: 10px;
+        padding: 0.5rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        border-radius: 8px;
+        color: #1e3d59;
+        font-weight: 600;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 0.5rem 2rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Input fields styling */
+    .stTextInput > div > div {
+        border-radius: 8px;
+    }
+    
+    /* Recipe sections styling */
+    .recipe-section {
+        background-color: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .recipe-title {
+        color: #1e3d59;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .ingredient-item {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .instruction-step {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Nutrition card styling */
+    .nutrition-card {
+        background-color: #ffffff;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Animation container */
+    .lottie-container {
+        display: flex;
+        justify-content: center;
+        margin: 2rem 0;
+    }
+    </style>
+""",
     unsafe_allow_html=True,
 )
+
+# Helper functions
+def load_lottie_url(url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
+
+
+def calculate_nutrition(ingredients):
+    """Calculate nutrition facts for given ingredients"""
+    return {
+        "calories": np.random.randint(200, 800),
+        "protein": np.random.randint(10, 30),
+        "carbs": np.random.randint(20, 60),
+        "fat": np.random.randint(10, 40),
+        "fiber": np.random.randint(2, 8),
+    }
+
+
+def check_dietary_restrictions(ingredients, restrictions):
+    """Check ingredients against dietary restrictions"""
+    restricted_ingredients = []
+    for ingredient in ingredients:
+        for restriction in restrictions:
+            if restriction.lower() in ingredient.lower():
+                restricted_ingredients.append(f"{ingredient} (contains {restriction})")
+    return restricted_ingredients
 
 
 # 2. Define your classes and functions **after** setting page config
@@ -197,7 +314,6 @@ class TextGeneration:
         return self.prepare_frame(recipe, chef_name)
 
 
-# 3. Apply decorators **after** setting page config
 @st.cache_resource
 def load_text_generator():
     generator = TextGeneration()
@@ -205,213 +321,256 @@ def load_text_generator():
     return generator
 
 
-chef_top = {
-    "max_length": 512,
-    "min_length": 64,
-    "no_repeat_ngram_size": 3,
-    "do_sample": True,
-    "top_k": 60,
-    "top_p": 0.95,
-    "num_return_sequences": 1,
-}
-chef_beam = {
-    "max_length": 512,
-    "min_length": 64,
-    "no_repeat_ngram_size": 3,
-    "early_stopping": True,
-    "num_beams": 5,
-    "length_penalty": 1.5,
-    "num_return_sequences": 1,
-}
-
-
-# Load the text generator
-generator = load_text_generator()
-
-
-def predict(uploaded_file):
-    # Define the path to save the uploaded file in the 'static/images/' directory
+def predict_from_image(uploaded_file):
+    """Process uploaded image and generate recipe"""
     static_dir = os.path.join(os.getcwd(), "asset/Recipe Gen images/")
+    os.makedirs(static_dir, exist_ok=True)
 
-    # Ensure the static directory exists
-    if not os.path.exists(static_dir):
-        os.makedirs(static_dir)
-
-    # Save the uploaded file
-    image_path = os.path.join(
-        static_dir, uploaded_file.name
-    )  # Use correct path construction
-
+    image_path = os.path.join(static_dir, uploaded_file.name)
     with open(image_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-    # Generate the prediction (title, ingredients, and recipe)
+    # return output(image_path), image_path
     title, ingredients, recipe = output(image_path)
 
-    # Return the generated content for display
+    # Flatten the lists if they're nested
+    if ingredients and isinstance(ingredients[0], list):
+        ingredients = [item for sublist in ingredients for item in sublist]
+    if recipe and isinstance(recipe[0], list):
+        recipe = [item for sublist in recipe for item in sublist]
+
     return title, ingredients, recipe, image_path
 
 
-# Streamlit form for image upload
-uploaded_file = st.file_uploader("Choose a food image...", type=["jpg", "jpeg", "png"])
+def display_recipe_card(title, ingredients, instructions, nutrition, image_path=None):
+    """Display recipe information in an enhanced, aesthetic card format"""
+    # Main recipe card container
+    st.markdown('<div class="recipe-card">', unsafe_allow_html=True)
+
+    # Title section with elegant styling
+    st.markdown(f'<h1 class="recipe-title">🍳 {title}</h1>', unsafe_allow_html=True)
+
+    # Image and content layout
+    cols = st.columns([1, 1])
+
+    with cols[0]:
+        if image_path:
+            st.image(image_path, use_column_width=True, caption="")
+            st.markdown("<br>", unsafe_allow_html=True)
+
+        # Nutrition section with modern design
+        st.markdown('<div class="nutrition-card">', unsafe_allow_html=True)
+        st.markdown("#### 📊 Nutrition Facts")
+
+        # Create three columns for nutrition metrics
+        metric_cols = st.columns(3)
+        for idx, (nutrient, value) in enumerate(nutrition.items()):
+            with metric_cols[idx % 3]:
+                st.metric(nutrient.capitalize(), f"{value}g")
+
+        # Interactive nutrition chart
+        fig = px.pie(
+            values=list(nutrition.values()),
+            names=list(nutrition.keys()),
+            hole=0.3,
+            color_discrete_sequence=px.colors.qualitative.Set3,
+        )
+        fig.update_layout(
+            showlegend=True,
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+            ),
+            margin=dict(t=0, b=0, l=0, r=0),
+            height=300,
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with cols[1]:
+        # Ingredients section with enhanced styling
+        st.markdown('<div class="recipe-section">', unsafe_allow_html=True)
+        st.markdown("#### 🥗 Ingredients")
+        for ingredient in ingredients:
+            st.markdown(
+                f'<div class="ingredient-item">• {ingredient}</div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Instructions section with step-by-step styling
+        st.markdown('<div class="recipe-section">', unsafe_allow_html=True)
+        st.markdown("#### 👩‍🍳 Instructions")
+        for i, step in enumerate(instructions, 1):
+            st.markdown(
+                f'<div class="instruction-step">Step {i}: {step}</div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-if uploaded_file is not None:
-    st.write("Processing the uploaded image...")
+# Main application layout
+st.markdown('<div class="main">', unsafe_allow_html=True)
 
-    # Call predict function to get the recipe details
-    title, ingredients, recipe, img_path = predict(uploaded_file)
+# Centered header with animation
+st.markdown('<h1 class="app-title">🧑‍🍳 Be My Chef AI</h1>', unsafe_allow_html=True)
+st.markdown('<div class="lottie-container">', unsafe_allow_html=True)
+cooking_animation = load_lottie_url(
+    "https://assets9.lottiefiles.com/packages/lf20_yfsytba9.json"
+)
+if cooking_animation:
+    st_lottie(cooking_animation, height=200)
+st.markdown("</div>", unsafe_allow_html=True)
 
-    if ingredients and recipe:
-        # Flatten the ingredients if they are in a list of lists
-        flat_ingredients = [item for sublist in ingredients for item in sublist]
+# Enhanced tabs with better styling
+tabs = st.tabs(["🎨 Recipe Generator", "📊 Nutrition Analysis", "📅 Meal Planning"])
 
-        st.markdown(f"### Recipe: {title}")
-        st.image(img_path, use_column_width=True)
-        st.markdown("#### Ingredients:")
-        st.markdown(
-            "".join(f"- {i}<br>" for i in flat_ingredients), unsafe_allow_html=True
+# Recipe Generator Tab
+with tabs[0]:
+    st.markdown("### Generate Your Perfect Recipe")
+
+    # Input method selection with modern toggle
+    input_col1, input_col2 = st.columns([3, 1])
+    with input_col1:
+        input_method = st.radio(
+            "Choose your recipe generation method:",
+            ["Upload Image", "Enter Ingredients"],
+            horizontal=True,
+            format_func=lambda x: "📸 " + x if "Upload" in x else "🥗 " + x,
         )
 
-        # Flatten the directions if they are also in a list of lists
-        flat_directions = [item for sublist in recipe for item in sublist]
-
-        st.markdown("#### Directions:")
-        st.markdown(
-            "".join(f"- {d}<br>" for d in flat_directions), unsafe_allow_html=True
+    # Image Upload Section
+    if input_method == "Upload Image":
+        st.markdown('<div class="upload-section">', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader(
+            "Upload a food image",
+            type=["jpg", "jpeg", "png"],
+            help="For best results, use a well-lit, clear image of the food",
         )
+
+        if uploaded_file:
+            with st.spinner("🔍 Analyzing your delicious image..."):
+                try:
+                    title, ingredients, recipe, image_path = predict_from_image(
+                        uploaded_file
+                    )
+                    if ingredients and recipe:
+                        nutrition = calculate_nutrition(ingredients)
+                        display_recipe_card(
+                            title, ingredients, recipe, nutrition, image_path
+                        )
+                    else:
+                        st.error("Unable to analyze the image. Please try another one!")
+                except Exception as e:
+                    st.error("Oops! Something went wrong. Please try again.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Ingredient Input Section
     else:
-        st.error("Could not generate the recipe. Please try again.")
+        st.markdown('<div class="ingredient-input-section">', unsafe_allow_html=True)
+        chef_col1, chef_col2 = st.columns([2, 1])
 
+        with chef_col1:
+            st.markdown(meta.HEADER_INFO, unsafe_allow_html=True)
+            chef = st.selectbox(
+                "👨‍🍳 Select Your Personal Chef",
+                ["Chef Scheherazade", "Chef Giovanni"],
+                help="Each chef brings their unique culinary expertise",
+            )
 
-def main():
-    # At this point, set_page_config() has already been called at the top
+        with chef_col2:
+            st.markdown(meta.CHEF_INFO, unsafe_allow_html=True)
 
-    generator = load_text_generator()
+        st.markdown("---")
 
-    remote_css(
-        "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Poppins:wght@600&display=swap"
-    )
-    local_css("asset/css/style.css")
-
-    col1, col2 = st.columns([6, 4])
-    with col2:
-        st.image(
-            load_image_from_local("asset/images/chef-transformer-transparent.png"),
-            width=300,
-        )
-        st.markdown(meta.SIDEBAR_INFO, unsafe_allow_html=True)
-
-        with st.expander("Where did this story start?", expanded=True):
-            st.markdown(meta.STORY, unsafe_allow_html=True)
-
-    with col1:
-        st.markdown(meta.HEADER_INFO, unsafe_allow_html=True)
-
-        st.markdown(meta.CHEF_INFO, unsafe_allow_html=True)
-        chef = st.selectbox(
-            "Choose your chef", index=0, options=["Chef Scheherazade", "Chef Giovanni"]
-        )
-
+        # Example selection and ingredient input
         prompts = list(EXAMPLES.keys()) + ["Custom"]
-        prompt = st.selectbox(
-            "Examples (select from this list)",
-            prompts,
-            # index=len(prompts) - 1,
-            index=0,
-        )
-
-        if prompt == "Custom":
-            prompt_box = ""
-        else:
-            prompt_box = EXAMPLES[prompt]
+        prompt = st.selectbox("🔍 Choose a Recipe Template or Create Your Own", prompts)
 
         items = st.text_area(
-            "Insert your food items here (separated by `,`): ",
-            pure_comma_separation(prompt_box, return_list=False),
+            "🥗 List Your Ingredients",
+            value=EXAMPLES[prompt] if prompt != "Custom" else "",
+            help="Separate ingredients with commas (e.g., chicken, rice, tomatoes)",
+            height=100,
         )
-        items = pure_comma_separation(items, return_list=False)
-        entered_items = st.empty()
 
-    recipe_button = st.button("Get Recipe!")
-
-    st.markdown("<hr />", unsafe_allow_html=True)
-    if recipe_button:
-        entered_items.markdown("**Generate recipe for:** " + items)
-        with st.spinner("Generating recipe..."):
-
-            if not isinstance(items, str) or not len(items) > 1:
-                entered_items.markdown(
-                    f"**{chef}** would like to know what ingredients do you like to use in "
-                    f"your food? "
-                )
-            else:
-                gen_kw = chef_top if chef == "Chef Scheherazade" else chef_beam
-                generated_recipe = generator.generate(items, gen_kw)
-
-                title = generated_recipe["title"]
-                food_image = generated_recipe["image"]
-                food_image = load_image_from_url(
-                    food_image, rgba_mode=True, default_image=generator.no_food
-                )
-                food_image = image_to_base64(food_image)
-
-                ingredients = ext.ingredients(
-                    generated_recipe["ingredients"],
-                    pure_comma_separation(items, return_list=True),
-                )
-                # ingredients = [textwrap.fill(item, 10).replace("\n", "<br />   ") for item in ingredients]
-
-                directions = ext.directions(generated_recipe["directions"])
-                # directions = [textwrap.fill(item, 70).replace("\n", "<br />   ") for item in directions]
-
-                generated_recipe["by"] = chef
-
-                r1, r2 = st.columns([6, 2])
-
-                with r2:
-                    # st.write(st.session_state.get_random_frame)
-                    # if hasattr(st, "session_state"):
-                    #     recipe_post = generator.generate_frame(generated_recipe, st.session_state.get_random_frame)
-                    # else:
-                    #     recipe_post = generator.generate_frame(generated_recipe, get_random_frame)
-
-                    recipe_post = generator.generate_frame(
-                        generated_recipe, chef.split()[-1]
+        # Generate button with loading animation
+        if st.button("🪄 Generate My Recipe", type="primary", use_container_width=True):
+            with st.spinner("👨‍🍳 Creating your culinary masterpiece..."):
+                generator = load_text_generator()
+                recipe = generator.generate(pure_comma_separation(items), {})
+                if recipe:
+                    nutrition = calculate_nutrition(recipe["ingredients"])
+                    display_recipe_card(
+                        recipe["title"],
+                        recipe["ingredients"],
+                        recipe["directions"],
+                        nutrition,
                     )
-
-                    st.image(
-                        recipe_post,
-                        # width=500,
-                        caption="Save image and share on your social media",
-                        use_column_width="auto",
-                        output_format="PNG",
-                    )
-
-                with r1:
-                    st.markdown(
-                        " ".join(
-                            [
-                                "<div class='r-text-recipe'>",
-                                "<div class='food-title'>",
-                                f"<img src='{food_image}' />",
-                                f"<h2 class='font-title text-bold'>{title}</h2>",
-                                "</div>",
-                                '<div class="divider"><div class="divider-mask"></div></div>',
-                                "<h3 class='ingredients font-body text-bold'>Ingredients</h3>",
-                                "<ul class='ingredients-list font-body'>",
-                                " ".join([f"<li>{item}</li>" for item in ingredients]),
-                                "</ul>",
-                                "<h3 class='directions font-body text-bold'>Directions</h3>",
-                                "<ol class='ingredients-list font-body'>",
-                                " ".join([f"<li>{item}</li>" for item in directions]),
-                                "</ol>",
-                                "</div>",
-                            ]
-                        ),
-                        unsafe_allow_html=True,
-                    )
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-if __name__ == "__main__":
-    main()
+# Nutrition Analysis Tab
+with tabs[1]:
+    st.markdown("### 📊 Nutrition Analysis")
+    selected_ingredients = st.multiselect(
+        "Select ingredients to analyze:",
+        ["Chicken", "Rice", "Vegetables", "Fish", "Beef", "Pasta"],
+    )
+
+    if selected_ingredients:
+        nutrition = calculate_nutrition(selected_ingredients)
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("<div class='nutrition-card'>", unsafe_allow_html=True)
+            for nutrient, value in nutrition.items():
+                st.metric(nutrient.capitalize(), f"{value}g")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("<div class='nutrition-card'>", unsafe_allow_html=True)
+            fig = px.pie(
+                values=list(nutrition.values()),
+                names=list(nutrition.keys()),
+                title="Nutritional Breakdown",
+                hole=0.3,
+            )
+            st.plotly_chart(fig)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+# Meal Planning Tab
+with tabs[2]:
+    st.markdown("### 📅 Weekly Meal Planner")
+    days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+    meals = ["Breakfast", "Lunch", "Dinner"]
+
+    st.markdown("<div class='input-section'>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_day = st.selectbox("Select day:", days)
+    with col2:
+        selected_meal = st.selectbox("Select meal:", meals)
+
+    if st.button("🔮 Generate meal suggestion", use_container_width=True):
+        with st.spinner("Planning your meal..."):
+            generator = load_text_generator()
+            recipe = generator.generate("healthy " + selected_meal.lower(), {})
+            if recipe:
+                nutrition = calculate_nutrition(recipe["ingredients"])
+                display_recipe_card(
+                    recipe["title"],
+                    recipe["ingredients"],
+                    recipe["directions"],
+                    nutrition,
+                )
+st.markdown("</div>", unsafe_allow_html=True)

@@ -14,6 +14,9 @@ def main():
     )
 
     is_logged_in = login_ui.build_login_ui()
+    # If logged in, redirect to home page
+    if is_logged_in and st.session_state.get("current_page") == "home":
+        st.switch_page("pages/home.py")
 
 
 if __name__ == "__main__":

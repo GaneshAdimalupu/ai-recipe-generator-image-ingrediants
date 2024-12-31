@@ -249,7 +249,7 @@ class __login__:
                     "1c9a923f-fb21-4a91-b3f3-5f18e3f01182"
                 )
                 del_logout.empty()
-                st.rerun()
+                # st.rerun()
 
     def nav_sidebar(self):
         """Creates the side navigation bar that persists across pages."""
@@ -268,6 +268,7 @@ class __login__:
                         "Posts Page 📝",
                         "Chatbot",
                         "Search Engine",
+                        "main",
                     ],
                     styles={
                         "container": {"padding": "5px"},
@@ -282,24 +283,34 @@ class __login__:
                 # Handle navigation
                 if (
                     selected_option == "Recipe AI Model 👩🏻‍🍳"
-                    and st.session_state.get("current_page") != "home"
+                    and st.session_state.get("current_page") 
+                    != "home"
                 ):
                     st.switch_page("pages/home.py")
                 elif (
                     selected_option == "Posts Page 📝"
-                    and st.session_state.get("current_page") != "posts"
+                    and st.session_state.get("current_page") 
+                    != "posts"
                 ):
                     st.switch_page("pages/posts.py")
                 elif (
                     selected_option == "Chatbot"
-                    and st.session_state.get("current_page") != "chatbot"
+                    and st.session_state.get("current_page") 
+                    != "chatbot"
                 ):
                     st.switch_page("pages/chatbot.py")
                 elif (
                     selected_option == "Search Engine"
-                    and st.session_state.get("current_page") != "search"
+                    and st.session_state.get("current_page") 
+                    != "search"
                 ):
                     st.switch_page("pages/search.py")
+                elif (
+                     selected_option == "Home 👩🏻‍🍳"
+                     and st.session_state.get("current_page") 
+                     != "main"
+                 ):
+                 st.switch_page("pages/main.py")
 
                 # Logout button
                 st.markdown("---")
