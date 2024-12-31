@@ -4,3 +4,4 @@
 __pycache__/
 .env
 _secret_auth_.json
+/data/modelbest.ckpt
