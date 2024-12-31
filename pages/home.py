@@ -19,9 +19,6 @@ import re
 from utils.utils import pure_comma_separation
 
 
-# Page configuration
-st.set_page_config(page_title="Be My Chef AI - Recipe Generator", layout="wide")
-
 # Initialize login check
 if not st.session_state.get("LOGGED_IN", False):
     st.switch_page("streamlit_app.py")

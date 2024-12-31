@@ -1,6 +1,8 @@
 import streamlit as st
 from pages.widgets import __login__
 
+# Page configuration
+st.set_page_config(page_title="Be My Chef AI - Recipe Generator", layout="wide")
 
 def main():
     login_ui = __login__(
