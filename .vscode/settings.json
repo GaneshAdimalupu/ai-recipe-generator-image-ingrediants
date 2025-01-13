@@ -1,0 +1,9 @@
+{
+  "python.analysis.extraPaths": [
+    "./streamlit_login_auth_ui",
+    "/home/dark/miniconda3/envs/chef/lib/python3.10/site-packages",
+    "./pages/login_auth_ui"
+  ]
+
+
+}
