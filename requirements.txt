@@ -4,6 +4,10 @@ argon2-cffi==23.1.0
 argon2-cffi-bindings==21.2.0
 astunparse==1.6.3
 attrs==24.3.0
+<<<<<<< HEAD
+=======
+beautifulsoup4
+>>>>>>> 65553f288aa047f6c720f3b484687aa77fb31d93
 blinker==1.9.0
 cachetools==5.5.0
 certifi==2024.12.14
