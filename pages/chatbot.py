@@ -1,4 +1,9 @@
 import streamlit as st
+
+# Initialize login check
+if not st.session_state.get("LOGGED_IN", False):
+    st.switch_page("streamlit_app.py")
+    
 from transformers import pipeline
 from datetime import datetime
 from pymongo import MongoClient
@@ -6,7 +11,11 @@ from mongodb.db import get_database
 
 from pages.widgets import __login__
 
-# Initialize login UI
+
+
+
+
+# Initialize login UI with proper authentication token
 login_ui = __login__(
     auth_token="your_courier_auth_token",
     company_name="Be My Chef AI",
@@ -14,12 +23,8 @@ login_ui = __login__(
     height=200,
 )
 
-# Check if user is logged in and show navigation
-if not st.session_state.get("LOGGED_IN", False):
-    st.switch_page("streamlit_app.py")
-else:
-    # Show navigation sidebar
-    login_ui.nav_sidebar()
+# Show navigation sidebar
+login_ui.nav_sidebar()
 
 
 # Connect to MongoDB

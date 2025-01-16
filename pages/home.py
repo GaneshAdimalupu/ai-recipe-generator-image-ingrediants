@@ -1,5 +1,10 @@
-import os
 import streamlit as st
+
+# Initialize login check
+if not st.session_state.get("LOGGED_IN", False):
+    st.switch_page("streamlit_app.py")
+
+import os
 import numpy as np
 from pages.widgets import __login__
 import plotly.express as px
@@ -19,9 +24,7 @@ import re
 from utils.utils import pure_comma_separation
 
 
-# Initialize login check
-if not st.session_state.get("LOGGED_IN", False):
-    st.switch_page("streamlit_app.py")
+
 
 # Initialize login UI
 login_ui = __login__(
@@ -320,23 +323,45 @@ def load_text_generator():
 
 def predict_from_image(uploaded_file):
     """Process uploaded image and generate recipe"""
-    static_dir = os.path.join(os.getcwd(), "asset/Recipe Gen images/")
-    os.makedirs(static_dir, exist_ok=True)
+    try:
+        # Create directory if it doesn't exist
+        static_dir = os.path.join(os.getcwd(), "asset/Recipe Gen images/")
+        os.makedirs(static_dir, exist_ok=True)
 
-    image_path = os.path.join(static_dir, uploaded_file.name)
-    with open(image_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+        # Save the uploaded file
+        image_path = os.path.join(static_dir, uploaded_file.name)
+        with open(image_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
 
-    # return output(image_path), image_path
-    title, ingredients, recipe = output(image_path)
+        # Process image and get predictions
+        try:
+            title, ingredients, recipe = output(image_path)
+            
+            # Handle title if it's a list
+            if isinstance(title, list):
+                title = ' '.join(title) if title else "Custom Recipe"
+            elif not title:
+                title = "Custom Recipe"
 
-    # Flatten the lists if they're nested
-    if ingredients and isinstance(ingredients[0], list):
-        ingredients = [item for sublist in ingredients for item in sublist]
-    if recipe and isinstance(recipe[0], list):
-        recipe = [item for sublist in recipe for item in sublist]
+            # Flatten the lists if they're nested
+            if ingredients and isinstance(ingredients[0], list):
+                ingredients = [item for sublist in ingredients for item in sublist]
+            if recipe and isinstance(recipe[0], list):
+                recipe = [item for sublist in recipe for item in sublist]
 
-    return title, ingredients, recipe, image_path
+            # Ensure ingredients and recipe are lists
+            ingredients = ingredients if ingredients else []
+            recipe = recipe if recipe else []
+
+            return title, ingredients, recipe, image_path
+
+        except Exception as e:
+            st.error(f"Error processing image: {str(e)}")
+            return None, None, None, None
+
+    except Exception as e:
+        st.error(f"Error saving image: {str(e)}")
+        return None, None, None, None
 
 
 def display_recipe_card(title, ingredients, instructions, nutrition, image_path=None):
@@ -352,7 +377,7 @@ def display_recipe_card(title, ingredients, instructions, nutrition, image_path=
 
     with cols[0]:
         if image_path:
-            st.image(image_path, use_column_width=True, caption="")
+            st.image(image_path, use_container_width=True, caption="")
             st.markdown("<br>", unsafe_allow_html=True)
 
         # Nutrition section with modern design
@@ -437,7 +462,7 @@ with tabs[0]:
             format_func=lambda x: "📸 " + x if "Upload" in x else "🥗 " + x,
         )
 
-    # Image Upload Section
+    # Update the image upload section:
     if input_method == "Upload Image":
         st.markdown('<div class="upload-section">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader(
@@ -448,21 +473,49 @@ with tabs[0]:
 
         if uploaded_file:
             with st.spinner("🔍 Analyzing your delicious image..."):
-                try:
-                    title, ingredients, recipe, image_path = predict_from_image(
-                        uploaded_file
-                    )
-                    if ingredients and recipe:
-                        nutrition = calculate_nutrition(ingredients)
-                        display_recipe_card(
-                            title, ingredients, recipe, nutrition, image_path
-                        )
-                    else:
-                        st.error("Unable to analyze the image. Please try another one!")
-                except Exception as e:
-                    st.error("Oops! Something went wrong. Please try again.")
-        st.markdown("</div>", unsafe_allow_html=True)
+                title, ingredients, recipe, image_path = predict_from_image(uploaded_file)
+                
+                if title is None or ingredients is None or recipe is None:
+                    st.error("Unable to analyze the image. Please try another one!")
+                else:
+                    if not ingredients:
+                        st.warning("No ingredients detected. Generating a basic recipe...")
+                        ingredients = ["Main ingredient"]
+                    
+                    if not recipe:
+                        st.warning("No recipe steps detected. Generating basic steps...")
+                        recipe = ["Prepare ingredients", "Cook according to preference"]
+                    
+                    nutrition = calculate_nutrition(ingredients)
+                    
+                    # Update image display to use container width
+                    if image_path:
+                        st.image(image_path, use_container_width=True)
+                    
+                    display_recipe_card(title, ingredients, recipe, nutrition, image_path)
+                    
+                    # Create recipe text for download
+                    recipe_text = f"""
+    {title}
 
+    Ingredients:
+    {chr(10).join(['- ' + ing for ing in ingredients])}
+
+    Instructions:
+    {chr(10).join([f'{i+1}. {step}' for i, step in enumerate(recipe)])}
+    """
+                    # Create safe filename
+                    safe_title = "".join(x for x in title if x.isalnum() or x in [' ', '-', '_'])
+                    filename = f"{safe_title.lower().replace(' ', '_')}_recipe.txt"
+                    
+                    st.download_button(
+                        label="📥 Download Recipe",
+                        data=recipe_text,
+                        file_name=filename,
+                        mime="text/plain"
+                    )
+        
+        st.markdown("</div>", unsafe_allow_html=True)
     # Ingredient Input Section
     else:
         st.markdown('<div class="ingredient-input-section">', unsafe_allow_html=True)

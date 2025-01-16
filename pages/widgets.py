@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_lottie import st_lottie
 from streamlit_option_menu import option_menu
 from streamlit_cookies_manager import EncryptedCookieManager
+import os
 from .utils import (
     check_usr_pass,
     load_lottieurl,
@@ -55,7 +56,7 @@ class __login__:
         self.hide_footer_bool = hide_footer_bool
         self.lottie_url = lottie_url
 
-        # Initialize session state variables if they don't exist
+        # Initialize session state variables
         if "LOGGED_IN" not in st.session_state:
             st.session_state["LOGGED_IN"] = False
         if "LOGOUT_BUTTON_HIT" not in st.session_state:
@@ -73,11 +74,18 @@ class __login__:
 
     def get_username(self):
         """Retrieves username from cookies if user is logged in."""
-        if st.session_state["LOGOUT_BUTTON_HIT"] == False:
+        if not st.session_state["LOGOUT_BUTTON_HIT"]:
             fetched_cookies = self.cookies
             if "__streamlit_login_signup_ui_username__" in fetched_cookies.keys():
                 return fetched_cookies["__streamlit_login_signup_ui_username__"]
         return None
+
+    def get_current_page(self):
+        """Get the current page filename."""
+        try:
+            return os.path.basename(st.script_run_ctx.script_path)
+        except:
+            return "home.py"
 
     def login_widget(self):
         """Creates the login widget and handles authentication."""
@@ -96,29 +104,25 @@ class __login__:
                     if check_usr_pass(username, password):
                         st.session_state["LOGGED_IN"] = True
                         st.session_state["current_page"] = "home"
-                        self.cookies["__streamlit_login_signup_ui_username__"] = (
-                            username
-                        )
+                        self.cookies["__streamlit_login_signup_ui_username__"] = username
                         self.cookies.save()
                         del_login.empty()
                         st.switch_page("pages/home.py")
                     else:
                         st.error("Invalid Username or Password!")
 
-    def animation(self) -> None:
+    def animation(self):
         """Renders the lottie animation."""
         lottie_json = load_lottieurl(self.lottie_url)
         st_lottie(lottie_json, width=self.width, height=self.height)
 
-    def sign_up_widget(self) -> None:
+    def sign_up_widget(self):
         """Creates the sign-up widget and handles user registration."""
         with st.form("Sign Up Form"):
             name_sign_up = st.text_input("Name *", placeholder="Please enter your name")
             valid_name_check = check_valid_name(name_sign_up)
 
-            email_sign_up = st.text_input(
-                "Email *", placeholder="Please enter your email"
-            )
+            email_sign_up = st.text_input("Email *", placeholder="Please enter your email")
             valid_email_check = check_valid_email(email_sign_up)
             unique_email_check = check_unique_email(email_sign_up)
 
@@ -158,7 +162,7 @@ class __login__:
                     )
                     st.success("Registration Successful!")
 
-    def forgot_password(self) -> None:
+    def forgot_password(self):
         """Handles the forgot password functionality."""
         with st.form("Forgot Password Form"):
             email_forgot_passwd = st.text_input(
@@ -186,7 +190,7 @@ class __login__:
                     change_passwd(email_forgot_passwd, random_password)
                     st.success("Secure Password Sent Successfully!")
 
-    def reset_password(self) -> None:
+    def reset_password(self):
         """Handles password reset functionality."""
         with st.form("Reset Password Form"):
             email_reset_passwd = st.text_input(
@@ -235,22 +239,6 @@ class __login__:
                     change_passwd(email_reset_passwd, new_passwd)
                     st.success("Password Reset Successfully!")
 
-    def logout_widget(self) -> None:
-        """Creates the logout widget in the sidebar."""
-        if st.session_state["LOGGED_IN"]:
-            del_logout = st.sidebar.empty()
-            del_logout.markdown("#")
-            logout_click_check = del_logout.button(self.logout_button_name)
-
-            if logout_click_check:
-                st.session_state["LOGOUT_BUTTON_HIT"] = True
-                st.session_state["LOGGED_IN"] = False
-                self.cookies["__streamlit_login_signup_ui_username__"] = (
-                    "1c9a923f-fb21-4a91-b3f3-5f18e3f01182"
-                )
-                del_logout.empty()
-                # st.rerun()
-
     def nav_sidebar(self):
         """Creates the side navigation bar that persists across pages."""
         with st.sidebar:
@@ -258,18 +246,47 @@ class __login__:
             st.write("AI-Powered Recipe Assistance")
 
             if st.session_state["LOGGED_IN"]:
-                # Main navigation for logged-in users
-                selected_option = option_menu(
+                # Get current page
+                try:
+                    current_path = str(st.script_run_ctx.script_path)
+                    current_page = os.path.basename(current_path)
+                except:
+                    current_page = "home.py"
+
+                # Define page mappings with proper icons
+                page_mappings = {
+                    "home.py": {
+                        "index": 0,
+                        "title": "Recipe AI Model 👩🏻‍🍳",
+                        "icon": "house"  # Changed to 'house' as 'find' isn't in bootstrap icons
+                    },
+                    "posts.py": {
+                        "index": 1,
+                        "title": "Posts Page 📝",
+                        "icon": "file-text"  # Using 'file-text' instead of 'file-post'
+                    },
+                    "recipe.py": {
+                        "index": 2,
+                        "title": "Recipes",
+                        "icon": "book"  # Using 'book' for recipes
+                    },
+                    "search.py": {
+                        "index": 3,
+                        "title": "Search Engine",
+                        "icon": "search"
+                    }
+                }
+
+                # Get current index safely
+                current_index = page_mappings.get(current_page, {}).get("index", 0)
+
+                # Create the navigation menu
+                selected = option_menu(
                     menu_title="Navigation",
                     menu_icon="list-columns-reverse",
-                    icons=["house", "file-post", "chat", "search"],
-                    options=[
-                        "Recipe AI Model 👩🏻‍🍳",
-                        "Posts Page 📝",
-                        "Chatbot",
-                        "Search Engine",
-                        "main",
-                    ],
+                    icons=[page["icon"] for page in page_mappings.values()],
+                    options=[page["title"] for page in page_mappings.values()],
+                    default_index=current_index,
                     styles={
                         "container": {"padding": "5px"},
                         "nav-link": {
@@ -277,55 +294,39 @@ class __login__:
                             "text-align": "left",
                             "margin": "0px",
                         },
-                    },
+                        "nav-link-selected": {
+                            "background-color": "#FF4B4B",
+                        },
+                        "icon": {
+                            "font-size": "16px"
+                        }
+                    }
                 )
 
-                # Handle navigation
-                if (
-                    selected_option == "Recipe AI Model 👩🏻‍🍳"
-                    and st.session_state.get("current_page") 
-                    != "home"
-                ):
-                    st.switch_page("pages/home.py")
-                elif (
-                    selected_option == "Posts Page 📝"
-                    and st.session_state.get("current_page") 
-                    != "posts"
-                ):
-                    st.switch_page("pages/posts.py")
-                elif (
-                    selected_option == "Chatbot"
-                    and st.session_state.get("current_page") 
-                    != "chatbot"
-                ):
-                    st.switch_page("pages/chatbot.py")
-                elif (
-                    selected_option == "Search Engine"
-                    and st.session_state.get("current_page") 
-                    != "search"
-                ):
-                    st.switch_page("pages/search.py")
-                elif (
-                     selected_option == "Home 👩🏻‍🍳"
-                     and st.session_state.get("current_page") 
-                     != "main"
-                 ):
-                 st.switch_page("pages/main.py")
+                # Handle navigation with error checking
+                for page_file, page_info in page_mappings.items():
+                    if selected == page_info["title"] and current_page != page_file:
+                        try:
+                            st.session_state["current_page"] = page_file
+                            st.switch_page(f"pages/{page_file}")
+                        except Exception as e:
+                            st.error(f"Error navigating to page: {str(e)}")
 
-                # Logout button
+                # Logout section
                 st.markdown("---")
-                if st.button(self.logout_button_name + " 🔒"):
+                if st.button(f"{self.logout_button_name} 🔒"):
                     self.handle_logout()
+
             else:
-                # Login-related navigation
-                selected_option = option_menu(
+                # Login-related navigation with proper icons
+                selected = option_menu(
                     menu_title="Navigation",
                     menu_icon="list-columns-reverse",
                     icons=[
-                        "box-arrow-in-right",
-                        "person-plus",
-                        "x-circle",
-                        "arrow-counterclockwise",
+                        "box-arrow-in-right",  # Login
+                        "person-plus",         # Create Account
+                        "key",                 # Forgot Password
+                        "arrow-repeat"         # Reset Password
                     ],
                     options=[
                         "Login",
@@ -340,10 +341,13 @@ class __login__:
                             "text-align": "left",
                             "margin": "0px",
                         },
-                    },
+                        "icon": {
+                            "font-size": "16px"
+                        }
+                    }
                 )
 
-            return selected_option
+            return selected
 
     def handle_logout(self):
         """Handles the logout process."""
@@ -356,7 +360,7 @@ class __login__:
         self.cookies.save()
         st.switch_page("streamlit_app.py")
 
-    def hide_menu(self) -> None:
+    def hide_menu(self):
         """Hides the streamlit menu."""
         st.markdown(
             """
@@ -367,7 +371,7 @@ class __login__:
             unsafe_allow_html=True,
         )
 
-    def hide_footer(self) -> None:
+    def hide_footer(self):
         """Hides the streamlit footer."""
         st.markdown(
             """
@@ -381,15 +385,9 @@ class __login__:
     def build_login_ui(self):
         """Main method to build the complete login UI."""
         # Check if user is already logged in via cookies
-        if (
-            not st.session_state["LOGGED_IN"]
-            and not st.session_state["LOGOUT_BUTTON_HIT"]
-        ):
+        if not st.session_state["LOGGED_IN"] and not st.session_state["LOGOUT_BUTTON_HIT"]:
             if "__streamlit_login_signup_ui_username__" in self.cookies:
-                if (
-                    self.cookies["__streamlit_login_signup_ui_username__"]
-                    != "1c9a923f-fb21-4a91-b3f3-5f18e3f01182"
-                ):
+                if self.cookies["__streamlit_login_signup_ui_username__"] != "1c9a923f-fb21-4a91-b3f3-5f18e3f01182":
                     st.session_state["LOGGED_IN"] = True
 
         selected_option = self.nav_sidebar()
