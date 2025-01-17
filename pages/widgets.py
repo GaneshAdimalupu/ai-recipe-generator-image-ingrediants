@@ -1,3 +1,4 @@
+from datetime import time
 import streamlit as st
 from streamlit_lottie import st_lottie
 from streamlit_option_menu import option_menu
@@ -64,6 +65,14 @@ class __login__:
         if "current_page" not in st.session_state:
             st.session_state["current_page"] = "home"
 
+        # Add these new initializations for navigation state
+        if 'current_view' not in st.session_state:
+            st.session_state.current_view = 'home'
+        if 'page_transition' not in st.session_state:
+            st.session_state.page_transition = False
+        if 'selected_page' not in st.session_state:
+            st.session_state.selected_page = 'home'
+
         self.cookies = EncryptedCookieManager(
             prefix="streamlit_login_ui_yummy_cookies",
             password="9d68d6f2-4258-45c9-96eb-2d6bc74ddbb5-d8f49cab-edbb-404a-94d0-b25b1d4a564b",
@@ -71,7 +80,6 @@ class __login__:
 
         if not self.cookies.ready():
             st.stop()
-
     def get_username(self):
         """Retrieves username from cookies if user is logged in."""
         if not st.session_state["LOGOUT_BUTTON_HIT"]:
@@ -242,118 +250,141 @@ class __login__:
     def nav_sidebar(self):
         """Creates the side navigation bar that persists across pages."""
         with st.sidebar:
-            st.title("💎 Be My Chef AI")
+            st.markdown('<h1 class="sidebar-title">💎 Be My Chef AI</h1>', unsafe_allow_html=True)
             st.write("AI-Powered Recipe Assistance")
 
             if st.session_state["LOGGED_IN"]:
-                # Get current page
+                # Initialize current view if not exists
+                if 'current_view' not in st.session_state:
+                    st.session_state.current_view = 'home'
+
+                # Define menu items
+                menu_items = [
+                    {"id": "home", "title": "Recipe AI Model", "icon": "house-fill"},
+                    {"id": "posts", "title": "Community Feed", "icon": "people-fill"},
+                    {"id": "recipe", "title": "Recipe Explorer", "icon": "book"},
+                    {"id": "search", "title": "Recipe Search", "icon": "search"}
+                ]
+
+                # Get current page and index
+                current_id = st.session_state.current_view  # Default to current view
                 try:
-                    current_path = str(st.script_run_ctx.script_path)
-                    current_page = os.path.basename(current_path)
-                except:
-                    current_page = "home.py"
+                    current_path = os.path.basename(st.script_run_ctx.script_path)
+                    if current_path.endswith('.py'):
+                        current_id = current_path[:-3]  # Remove .py extension
+                except Exception:
+                    pass  # Keep using the default current_id
 
-                # Define page mappings with proper icons
-                page_mappings = {
-                    "home.py": {
-                        "index": 0,
-                        "title": "Recipe AI Model 👩🏻‍🍳",
-                        "icon": "house"  # Changed to 'house' as 'find' isn't in bootstrap icons
-                    },
-                    "posts.py": {
-                        "index": 1,
-                        "title": "Posts Page 📝",
-                        "icon": "file-text"  # Using 'file-text' instead of 'file-post'
-                    },
-                    "recipe.py": {
-                        "index": 2,
-                        "title": "Recipes",
-                        "icon": "book"  # Using 'book' for recipes
-                    },
-                    "search.py": {
-                        "index": 3,
-                        "title": "Search Engine",
-                        "icon": "search"
-                    }
-                }
+                # Find current index
+                current_index = next((i for i, item in enumerate(menu_items) 
+                                    if item["id"] == current_id), 0)
 
-                # Get current index safely
-                current_index = page_mappings.get(current_page, {}).get("index", 0)
-
-                # Create the navigation menu
+                # Create navigation menu
                 selected = option_menu(
-                    menu_title="Navigation",
-                    menu_icon="list-columns-reverse",
-                    icons=[page["icon"] for page in page_mappings.values()],
-                    options=[page["title"] for page in page_mappings.values()],
+                    menu_title=None,
+                    options=[item["title"] for item in menu_items],
+                    icons=[item["icon"] for item in menu_items],
                     default_index=current_index,
                     styles={
-                        "container": {"padding": "5px"},
+                        "container": {"padding": "0!important", "background-color": "transparent"},
+                        "icon": {"font-size": "1rem", "margin-right": "8px"},
                         "nav-link": {
-                            "font-size": "14px",
+                            "font-size": "0.9rem",
                             "text-align": "left",
-                            "margin": "0px",
+                            "padding": "0.75rem",
+                            "margin": "0.2rem 0",
+                            "transition": "all 0.3s ease"
                         },
                         "nav-link-selected": {
                             "background-color": "#FF4B4B",
-                        },
-                        "icon": {
-                            "font-size": "16px"
+                            "font-weight": "600"
                         }
                     }
                 )
 
-                # Handle navigation with error checking
-                for page_file, page_info in page_mappings.items():
-                    if selected == page_info["title"] and current_page != page_file:
-                        try:
-                            st.session_state["current_page"] = page_file
-                            st.switch_page(f"pages/{page_file}")
-                        except Exception as e:
-                            st.error(f"Error navigating to page: {str(e)}")
+                # Handle navigation
+                selected_item = next((item for item in menu_items if item["title"] == selected), None)
+                if selected_item:
+                    page_name = selected_item["id"]
+                    if current_id != page_name:
+                        st.session_state.current_view = page_name
+                        st.switch_page(f"pages/{page_name}.py")
 
                 # Logout section
                 st.markdown("---")
-                if st.button(f"{self.logout_button_name} 🔒"):
+                if st.button("🔒 Logout", key="logout", use_container_width=True):
                     self.handle_logout()
 
             else:
-                # Login-related navigation with proper icons
+                # Login-related navigation
                 selected = option_menu(
-                    menu_title="Navigation",
-                    menu_icon="list-columns-reverse",
-                    icons=[
-                        "box-arrow-in-right",  # Login
-                        "person-plus",         # Create Account
-                        "key",                 # Forgot Password
-                        "arrow-repeat"         # Reset Password
-                    ],
+                    menu_title=None,
                     options=[
                         "Login",
                         "Create Account",
                         "Forgot Password?",
-                        "Reset Password",
+                        "Reset Password"
+                    ],
+                    icons=[
+                        "box-arrow-in-right",
+                        "person-plus-fill",
+                        "question-circle-fill",
+                        "arrow-counterclockwise"
                     ],
                     styles={
-                        "container": {"padding": "5px"},
+                        "container": {"padding": "0!important", "background-color": "transparent"},
+                        "icon": {"font-size": "1rem", "margin-right": "8px"},
                         "nav-link": {
-                            "font-size": "14px",
+                            "font-size": "0.9rem",
                             "text-align": "left",
-                            "margin": "0px",
+                            "padding": "0.75rem",
+                            "margin": "0.2rem 0",
                         },
-                        "icon": {
-                            "font-size": "16px"
+                        "nav-link-selected": {
+                            "background-color": "#FF4B4B",
+                            "font-weight": "600"
                         }
                     }
                 )
 
             return selected
+    
+    def render_page_content(self):
+        """Renders the content for the current view"""
+        if not st.session_state.get("LOGGED_IN"):
+            return
+
+        # Add a loading spinner during transitions
+        if st.session_state.get('page_transition'):
+            with st.spinner("Loading..."):
+                time.sleep(0.3)  # Short delay for smooth transition
+            st.session_state.page_transition = False
+        
+        current_view = st.session_state.get('current_view', 'home')
+        
+        try:
+            if current_view == 'home':
+                from pages.home import render_home_content
+                render_home_content()
+            elif current_view == 'posts':
+                from pages.posts import render_posts_content
+                render_posts_content()
+            elif current_view == 'recipe':
+                from pages.recipe import render_recipe_content
+                render_recipe_content()
+            elif current_view == 'search':
+                from pages.search import render_search_content
+                render_search_content()
+        except Exception as e:
+            st.error(f"Error loading content: {str(e)}")
 
     def handle_logout(self):
         """Handles the logout process."""
         st.session_state["LOGGED_IN"] = False
         st.session_state["LOGOUT_BUTTON_HIT"] = True
         st.session_state["current_page"] = "home"
+        st.session_state.nav_selected = 'home.py'  # Reset navigation selection
+        st.session_state.nav_page_changed = False  # Reset navigation change flag
         self.cookies["__streamlit_login_signup_ui_username__"] = (
             "1c9a923f-fb21-4a91-b3f3-5f18e3f01182"
         )
@@ -390,9 +421,17 @@ class __login__:
                 if self.cookies["__streamlit_login_signup_ui_username__"] != "1c9a923f-fb21-4a91-b3f3-5f18e3f01182":
                     st.session_state["LOGGED_IN"] = True
 
+        # Initialize view state if needed
+        if st.session_state.get("LOGGED_IN") and 'current_view' not in st.session_state:
+            st.session_state.current_view = 'home'
+        
         selected_option = self.nav_sidebar()
 
-        if not st.session_state["LOGGED_IN"]:
+        if st.session_state.get("LOGGED_IN"):
+            # Render the main content for logged-in users
+            self.render_page_content()
+        else:
+            # Handle non-logged-in state
             if selected_option == "Login":
                 c1, c2 = st.columns([7, 3])
                 with c1:
