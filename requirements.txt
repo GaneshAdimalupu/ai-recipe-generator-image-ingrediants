@@ -77,6 +77,7 @@ tensorboard==2.18.0
 tensorboard-data-server==0.7.2
 tensorflow==2.18.0
 termcolor==2.5.0
+timeago
 tokenizers==0.14.1
 toml==0.10.2
 torch==2.5.1
