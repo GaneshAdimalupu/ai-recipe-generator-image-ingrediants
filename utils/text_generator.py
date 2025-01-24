@@ -2,12 +2,16 @@
 import os
 import re
 from PIL import ImageFont
+from chef_transformer.examples import EXAMPLES
 from transformers import pipeline, AutoTokenizer, set_seed
-from chef_transformer import dummy
+from chef_transformer import dummy, meta
 import streamlit as st
+from utils import ext
 from utils.api import generate_cook_image
 from utils.draw import generate_food_with_logo_image, generate_recipe_image
 import streamlit as st
+from utils.st import local_css, remote_css
+from utils.utils import image_to_base64, load_image_from_local, load_image_from_url, pure_comma_separation
 
 
 # Initialize login check
@@ -112,41 +116,33 @@ class TextGeneration:
         return frame
 
     def generate(self, items, generation_kwargs):
-        recipe = self.dummy_outputs[0]
-        # recipe = self.dummy_outputs[random.randint(0, len(self.dummy_outputs) - 1)]
+        if not isinstance(items, str) or not items.strip():
+            return None
 
-        if not self.debug:
-            generation_kwargs["num_return_sequences"] = 1
-            # generation_kwargs["return_full_text"] = False
-            generation_kwargs["return_tensors"] = True
-            generation_kwargs["return_text"] = False
+        try:
+            if not self.debug:
+                generation_kwargs["num_return_sequences"] = 1
+                generation_kwargs["return_tensors"] = True
+                generation_kwargs["return_text"] = False
 
-            generated_ids = self.generator(
-                items,
-                **generation_kwargs,
-            )[
-                0
-            ]["generated_token_ids"]
-            recipe = self.tokenizer.decode(generated_ids, skip_special_tokens=False)
-            recipe = self._skip_special_tokens_and_prettify(recipe)
+                generated_ids = self.generator(
+                    items,
+                    **generation_kwargs,
+                )[0]["generated_token_ids"]
 
-        if self.api_ids and self.api_keys and len(self.api_ids) == len(self.api_keys):
-            test = 0
-            for i in range(len(self.api_keys)):
-                if test > self.api_test:
-                    recipe["image"] = None
-                    break
-                image = generate_cook_image(
-                    recipe["title"].lower(), self.api_ids[i], self.api_keys[i]
-                )
-                test += 1
-                if image:
-                    recipe["image"] = image
-                    break
-        else:
-            recipe["image"] = None
+                recipe = self.tokenizer.decode(generated_ids, skip_special_tokens=False)
+                recipe = self._skip_special_tokens_and_prettify(recipe)
 
-        return recipe
+                # Add default image if none exists
+                recipe["image"] = recipe.get("image", None)
+
+                return recipe
+            else:
+                return self.dummy_outputs[0]
+
+        except Exception as e:
+            print(f"Error generating recipe: {str(e)}")
+            return None
 
     def generate_frame(self, recipe, chef_name):
         return self.prepare_frame(recipe, chef_name)
@@ -157,3 +153,165 @@ def load_text_generator():
     generator = TextGeneration()
     generator.load()
     return generator
+
+
+chef_top = {
+    "max_length": 512,
+    "min_length": 64,
+    "no_repeat_ngram_size": 3,
+    "do_sample": True,
+    "top_k": 60,
+    "top_p": 0.95,
+    "num_return_sequences": 1,
+}
+chef_beam = {
+    "max_length": 512,
+    "min_length": 64,
+    "no_repeat_ngram_size": 3,
+    "early_stopping": True,
+    "num_beams": 5,
+    "length_penalty": 1.5,
+    "num_return_sequences": 1,
+}
+
+
+def main():
+
+    generator = load_text_generator()
+    # if hasattr(st, "session_state"):
+    #     if 'get_random_frame' not in st.session_state:
+    #         st.session_state.get_random_frame = generator.frames[0]
+    # else:
+    #     get_random_frame = generator.frames[0]
+
+    remote_css(
+        "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Poppins:wght@600&display=swap"
+    )
+    local_css("asset/css/style.css")
+
+    col1, col2 = st.columns([6, 4])
+    with col2:
+        st.image(
+            load_image_from_local("asset/images/chef-transformer-transparent.png"),
+            width=300,
+        )
+        st.markdown(meta.SIDEBAR_INFO, unsafe_allow_html=True)
+
+        with st.expander("Where did this story start?", expanded=True):
+            st.markdown(meta.STORY, unsafe_allow_html=True)
+
+    with col1:
+        st.markdown(meta.HEADER_INFO, unsafe_allow_html=True)
+
+        st.markdown(meta.CHEF_INFO, unsafe_allow_html=True)
+        chef = st.selectbox(
+            "Choose your chef", index=0, options=["Chef Scheherazade", "Chef Giovanni"]
+        )
+
+        prompts = list(EXAMPLES.keys()) + ["Custom"]
+        prompt = st.selectbox(
+            "Examples (select from this list)",
+            prompts,
+            # index=len(prompts) - 1,
+            index=0,
+        )
+
+        if prompt == "Custom":
+            prompt_box = ""
+        else:
+            prompt_box = EXAMPLES[prompt]
+
+        items = st.text_area(
+            "Insert your food items here (separated by `,`): ",
+            pure_comma_separation(prompt_box, return_list=False),
+        )
+        items = pure_comma_separation(items, return_list=False)
+        entered_items = st.empty()
+
+    recipe_button = st.button("Get Recipe!")
+
+    st.markdown("<hr />", unsafe_allow_html=True)
+    if recipe_button:
+        # if hasattr(st, "session_state"):
+        #     st.session_state.get_random_frame = generator.frames[random.randint(0, len(generator.frames)) - 1]
+        # else:
+        #     get_random_frame = generator.frames[random.randint(0, len(generator.frames)) - 1]
+
+        entered_items.markdown("**Generate recipe for:** " + items)
+        with st.spinner("Generating recipe..."):
+
+            if not isinstance(items, str) or not len(items) > 1:
+                entered_items.markdown(
+                    f"**{chef}** would like to know what ingredients do you like to use in "
+                    f"your food? "
+                )
+            else:
+                gen_kw = chef_top if chef == "Chef Scheherazade" else chef_beam
+                generated_recipe = generator.generate(items, gen_kw)
+
+                title = generated_recipe["title"]
+                food_image = generated_recipe["image"]
+                food_image = load_image_from_url(
+                    food_image, rgba_mode=True, default_image=generator.no_food
+                )
+                food_image = image_to_base64(food_image)
+
+                ingredients = ext.ingredients(
+                    generated_recipe["ingredients"],
+                    pure_comma_separation(items, return_list=True),
+                )
+                # ingredients = [textwrap.fill(item, 10).replace("\n", "<br />   ") for item in ingredients]
+
+                directions = ext.directions(generated_recipe["directions"])
+                # directions = [textwrap.fill(item, 70).replace("\n", "<br />   ") for item in directions]
+
+                generated_recipe["by"] = chef
+
+                r1, r2 = st.columns([6, 2])
+
+                with r2:
+                    # st.write(st.session_state.get_random_frame)
+                    # if hasattr(st, "session_state"):
+                    #     recipe_post = generator.generate_frame(generated_recipe, st.session_state.get_random_frame)
+                    # else:
+                    #     recipe_post = generator.generate_frame(generated_recipe, get_random_frame)
+
+                    recipe_post = generator.generate_frame(
+                        generated_recipe, chef.split()[-1]
+                    )
+
+                    st.image(
+                        recipe_post,
+                        # width=500,
+                        caption="Save image and share on your social media",
+                        use_column_width="auto",
+                        output_format="PNG",
+                    )
+
+                with r1:
+                    st.markdown(
+                        " ".join(
+                            [
+                                "<div class='r-text-recipe'>",
+                                "<div class='food-title'>",
+                                f"<img src='{food_image}' />",
+                                f"<h2 class='font-title text-bold'>{title}</h2>",
+                                "</div>",
+                                '<div class="divider"><div class="divider-mask"></div></div>',
+                                "<h3 class='ingredients font-body text-bold'>Ingredients</h3>",
+                                "<ul class='ingredients-list font-body'>",
+                                " ".join([f"<li>{item}</li>" for item in ingredients]),
+                                "</ul>",
+                                "<h3 class='directions font-body text-bold'>Directions</h3>",
+                                "<ol class='ingredients-list font-body'>",
+                                " ".join([f"<li>{item}</li>" for item in directions]),
+                                "</ol>",
+                                "</div>",
+                            ]
+                        ),
+                        unsafe_allow_html=True,
+                    )
+
+
+if __name__ == "__main__":
+    main()
