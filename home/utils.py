@@ -54,7 +54,8 @@ def predict_from_image(uploaded_file):
 
         try:
             from Foodimg2Ing.output import output
-
+            
+            # Call output function which returns title, ingredients, recipe
             title, ingredients, recipe = output(image_path)
 
             # Handle title
@@ -78,9 +79,7 @@ def predict_from_image(uploaded_file):
                 recipe = [step for step in recipe if len(step.strip()) > 1]
 
             # Ensure ingredients and recipe are lists
-            ingredients = (
-                ingredients if ingredients and isinstance(ingredients, list) else []
-            )
+            ingredients = ingredients if ingredients and isinstance(ingredients, list) else []
             recipe = recipe if recipe else []
 
             return title, ingredients, recipe, image_path

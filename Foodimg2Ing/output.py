@@ -40,6 +40,7 @@ def get_model_path(data_dir):
             raise RuntimeError("Model not found either on Hugging Face or locally")
 
 def output(uploadedfile):
+    """Process the image and return recipe information"""
     # Keep all the codes and pre-trained weights in data directory
     data_dir = './data'
     os.makedirs(data_dir, exist_ok=True)  # Ensure data directory exists
@@ -50,49 +51,38 @@ def output(uploadedfile):
     map_loc = None if torch.cuda.is_available() and use_gpu else 'cpu'
 
     try:
-        # code below was used to save vocab files so that they can be loaded without Vocabulary class
+        # Load vocabulary files
         ingrs_vocab = pickle.load(open(os.path.join(data_dir, 'ingr_vocab.pkl'), 'rb'))
         vocab = pickle.load(open(os.path.join(data_dir, 'instr_vocab.pkl'), 'rb'))
-    except Exception as e:
-        raise RuntimeError(f"Failed to load vocabulary files: {e}")
 
-    ingr_vocab_size = len(ingrs_vocab)
-    instrs_vocab_size = len(vocab)
-    output_dim = instrs_vocab_size
+        ingr_vocab_size = len(ingrs_vocab)
+        instrs_vocab_size = len(vocab)
+        output_dim = instrs_vocab_size
 
-    t = time.time()
-    import sys; sys.argv=['']; del sys
-    args = get_parser()
-    args.maxseqlen = 15
-    args.ingrs_only=False
-    model = get_model(args, ingr_vocab_size, instrs_vocab_size)
+        # Initialize model
+        import sys; sys.argv=['']; del sys
+        args = get_parser()
+        args.maxseqlen = 15
+        args.ingrs_only = False
+        model = get_model(args, ingr_vocab_size, instrs_vocab_size)
    
-    # Get model path and load model
-    try:
+        # Load model
         model_path = get_model_path(data_dir)
         model.load_state_dict(torch.load(model_path, map_location=map_loc))
         model.to(device)
         model.eval()
         model.ingrs_only = False
         model.recipe_only = False
-    except Exception as e:
-        raise RuntimeError(f"Failed to load model: {e}")
 
-    transf_list_batch = []
-    transf_list_batch.append(transforms.ToTensor())
-    transf_list_batch.append(transforms.Normalize((0.485, 0.456, 0.406), 
-                                                (0.229, 0.224, 0.225)))
-    to_input_transf = transforms.Compose(transf_list_batch)
+        # Prepare image transformations
+        transf_list_batch = []
+        transf_list_batch.append(transforms.ToTensor())
+        transf_list_batch.append(transforms.Normalize((0.485, 0.456, 0.406), 
+                                                    (0.229, 0.224, 0.225)))
+        to_input_transf = transforms.Compose(transf_list_batch)
 
-    greedy = [True, False]
-    beam = [-1, -1]
-    temperature = 1.0
-    numgens = len(greedy)
-
-    try:
+        # Load and transform image
         img = image.load_img(uploadedfile)
-        
-        show_anyways = False
         transf_list = []
         transf_list.append(transforms.Resize(256))
         transf_list.append(transforms.CenterCrop(224))
@@ -100,33 +90,26 @@ def output(uploadedfile):
         
         image_transf = transform(img)
         image_tensor = to_input_transf(image_transf).unsqueeze(0).to(device)
-    except Exception as e:
-        raise RuntimeError(f"Failed to process input image: {e}")
 
-    num_valid = 1
-    title = []
-    ingredients = []
-    recipe = []
+        # Generate recipe
+        greedy = [True, False][0]  # Use only first option
+        beam = [-1, -1][0]  # Use only first option
+        temperature = 1.0
 
-    try:
-        for i in range(numgens):
-            with torch.no_grad():
-                outputs = model.sample(image_tensor, greedy=greedy[i], 
-                                    temperature=temperature, beam=beam[i], true_ingrs=None)
-                    
-            ingr_ids = outputs['ingr_ids'].cpu().numpy()
-            recipe_ids = outputs['recipe_ids'].cpu().numpy()
-                    
-            outs, valid = prepare_output(recipe_ids[0], ingr_ids[0], ingrs_vocab, vocab)
+        with torch.no_grad():
+            outputs = model.sample(image_tensor, greedy=greedy, 
+                                temperature=temperature, beam=beam, true_ingrs=None)
                 
-            if valid['is_valid'] or show_anyways:
-                title.append(outs['title'])
-                ingredients.append(outs['ingrs'])
-                recipe.append(outs['recipe'])
-            else:
-                title.append("Not a valid recipe!")
-                recipe.append("Reason: "+valid['reason'])
-    except Exception as e:
-        raise RuntimeError(f"Failed to generate recipe: {e}")
+        ingr_ids = outputs['ingr_ids'].cpu().numpy()
+        recipe_ids = outputs['recipe_ids'].cpu().numpy()
+                
+        outs, valid = prepare_output(recipe_ids[0], ingr_ids[0], ingrs_vocab, vocab)
             
-    return title, ingredients, recipe
+        if valid['is_valid']:
+            return outs['title'], outs['ingrs'], outs['recipe']
+        else:
+            return "Not a valid recipe!", [], ["Reason: " + valid['reason']]
+
+    except Exception as e:
+        print(f"Error in output function: {str(e)}")
+        return None, None, None
