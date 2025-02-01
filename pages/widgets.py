@@ -263,7 +263,13 @@ class __login__:
                     {"id": "home", "title": "Recipe AI Model", "icon": "house-fill"},
                     {"id": "posts", "title": "Community Feed", "icon": "people-fill"},
                     {"id": "recipe", "title": "Recipe Explorer", "icon": "book"},
-                    {"id": "search", "title": "Recipe Search", "icon": "search"}
+                    {"id": "search", "title": "Recipe Search", "icon": "search"},
+                    {
+                        "id": "chatbot",
+                        "title": "Recipe Assistant",
+                        "icon": "chat-dots-fill",
+                    },
+                    {"id": "profile", "title": "Profile", "icon": "person-circle"},
                 ]
 
                 # Get current page and index
@@ -348,7 +354,7 @@ class __login__:
                 )
 
             return selected
-    
+
     def render_page_content(self):
         """Renders the content for the current view"""
         if not st.session_state.get("LOGGED_IN"):
@@ -359,9 +365,9 @@ class __login__:
             with st.spinner("Loading..."):
                 time.sleep(0.3)  # Short delay for smooth transition
             st.session_state.page_transition = False
-        
+
         current_view = st.session_state.get('current_view', 'home')
-        
+
         try:
             if current_view == 'home':
                 from pages.home import render_home_content
@@ -375,6 +381,12 @@ class __login__:
             elif current_view == 'search':
                 from pages.search import render_search_content
                 render_search_content()
+            elif current_view == 'chatbot':
+                from pages.chatbot import render_chatbot_content
+                render_chatbot_content()
+            elif current_view == 'profile':
+                from pages.chatbot import render_profile_content
+                render_profile_content()
         except Exception as e:
             st.error(f"Error loading content: {str(e)}")
 
@@ -424,7 +436,7 @@ class __login__:
         # Initialize view state if needed
         if st.session_state.get("LOGGED_IN") and 'current_view' not in st.session_state:
             st.session_state.current_view = 'home'
-        
+
         selected_option = self.nav_sidebar()
 
         if st.session_state.get("LOGGED_IN"):
