@@ -175,19 +175,6 @@ def main():
         # Get current user with improved error handling
     username = get_current_username()
 
-        # Initialize login UI
-    from pages.widgets import __login__
-
-    login_ui = __login__(
-        auth_token="your_courier_auth_token",
-        company_name="Be My Chef AI",
-        width=200,
-        height=200,
-    )
-
-    # Show navigation
-    login_ui.nav_sidebar()
-
     if not username:
         st.error("Please log in to access the social feed.")
         st.error("If you're seeing this message after logging in, please try refreshing the page.")
