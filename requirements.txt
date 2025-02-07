@@ -72,7 +72,7 @@ streamlit-cookies-manager==0.2.0
 streamlit-lottie==0.0.5
 streamlit-option-menu==0.4.0
 sympy==1.13.1
-tenacity==9.0.0
+tenacity
 tensorboard==2.18.0
 tensorboard-data-server==0.7.2
 tensorflow==2.18.0
