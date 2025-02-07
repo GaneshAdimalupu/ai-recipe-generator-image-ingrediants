@@ -1,3 +1,4 @@
+import time
 from click import prompt
 from components.logo import add_logo_with_rotating_text
 from home.styles import  load_custom_css
@@ -20,11 +21,33 @@ from chef_transformer import dummy, meta
 import os
 import re
 from utils.utils import pure_comma_separation
+import json
+import streamlit.components.v1 as components
 
 
 # Initialize login check
 if not st.session_state.get("LOGGED_IN", False):
     st.switch_page("streamlit_app.py")
+
+def stream_text(text, delay=0.03):
+    """Stream text with a typewriter effect"""
+    container = st.empty()
+    displayed_text = ""
+    for char in text:
+        displayed_text += char
+        container.markdown(displayed_text)
+        if char in ['.', '!', '?', '\n']:
+            time.sleep(delay * 2)  # Longer pause for sentences
+        else:
+            time.sleep(delay)
+    return container
+
+def format_recipe_for_streaming(recipe):
+    """Format recipe data into a streamable string"""
+    title = f"# {recipe['title']}\n\n"
+    ingredients = "## Ingredients\n" + "\n".join([f"* {ing}" for ing in recipe['ingredients']]) + "\n\n"
+    directions = "## Instructions\n" + "\n".join([f"{i+1}. {step}" for i, step in enumerate(recipe['directions'])])
+    return title + ingredients + directions
 
 
 def render_home_content():
@@ -141,12 +164,24 @@ def render_ingredient_input_section():
 
             if recipe:
                 nutrition = calculate_nutrition(recipe["ingredients"])
-                display_recipe_card(
-                    recipe["title"],
-                    recipe["ingredients"],
-                    recipe["directions"],
-                    nutrition,
-                )
+                # Create two columns
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.markdown("### Your Recipe is Being Written...")
+                    formatted_recipe = format_recipe_for_streaming(recipe)
+                    recipe_container = stream_text(formatted_recipe)
+                
+                with col2:
+                    # Show nutrition info
+                    st.markdown("### Nutrition Facts")
+                    for nutrient, value in nutrition.items():
+                        st.metric(nutrient.capitalize(), f"{value}g")
+                    
+                    # Show save button after streaming is complete
+                    if st.button("📥 Save Recipe", key="save_recipe"):
+                        # Add your save functionality here
+                        st.success("Recipe saved successfully!")
             else:
                 st.error("Failed to generate recipe. Please try again.")
 

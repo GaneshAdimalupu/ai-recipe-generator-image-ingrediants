@@ -385,8 +385,10 @@ class __login__:
                 from pages.chatbot import render_chatbot_content
                 render_chatbot_content()
             elif current_view == 'profile':
-                from pages.chatbot import render_profile_content
-                render_profile_content()
+                from pages.profile import render_profile_page
+                render_profile_page()
+                current_user = st.session_state.get('username')
+                render_profile_page(current_user)  
         except Exception as e:
             st.error(f"Error loading content: {str(e)}")
 

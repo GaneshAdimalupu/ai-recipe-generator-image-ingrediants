@@ -1,3 +1,4 @@
+from datetime import datetime
 from mongodb.db import get_database
 
 # Initialize database connection
@@ -8,6 +9,7 @@ posts_collection = db["posts"]
 comments_collection = db["comments"]
 likes_collection = db["likes"]
 bookmarks_collection = db["bookmarks"]
+followers_collection = db["followers"]
 
 # Create indexes
 def setup_indexes():
@@ -33,6 +35,12 @@ def setup_indexes():
     # Bookmarks indexes (ensure unique bookmarks per user per post)
     bookmarks_collection.create_index(
         [("post_id", 1), ("user", 1)],
+        unique=True
+    )
+
+    # New followers index
+    followers_collection.create_index(
+        [("follower", 1), ("following", 1)],
         unique=True
     )
 
@@ -70,6 +78,42 @@ bookmark_schema = {
     "notes": str,  # Optional user notes about the saved recipe
     "collections": list  # User-defined collection labels
 }
+
+# Schema definitions
+followers_schema = {
+    "follower": str,  # Username of the follower
+    "following": str,  # Username being followed
+    "time": str  # ISO format timestamp
+}
+
+def follow_user(follower, following):
+    """Follow a user"""
+    if follower != following:  # Can't follow yourself
+        try:
+            followers_collection.insert_one({
+                "follower": follower,
+                "following": following,
+                "time": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+            return True
+        except Exception:
+            return False
+    return False
+
+def unfollow_user(follower, following):
+    """Unfollow a user"""
+    result = followers_collection.delete_one({
+        "follower": follower,
+        "following": following
+    })
+    return result.deleted_count > 0
+
+def is_following(follower, following):
+    """Check if user is following another user"""
+    return followers_collection.find_one({
+        "follower": follower,
+        "following": following
+    }) is not None
 
 # Database utilities
 def get_trending_posts(limit=10):
