@@ -37,8 +37,8 @@ def stream_data(text, delay: float = 0.02):
         yield word + " "
         time.sleep(delay)
 
-st.title("🧠 DeepSeek Code Companion")
-st.caption("🚀 Your AI Pair Programmer with Debugging Superpowers")
+st.title("🧠 Chef AI Companion")
+st.caption("🚀 Your can ask me anything related to cooking and I will help you out with the recip")
 
 
 llm_engine = ChatOllama(
@@ -54,7 +54,7 @@ system_prompt = SystemMessagePromptTemplate.from_template(
 )
 
 if "message_log" not in st.session_state:
-    st.session_state.message_log = [{"role": "ai", "content": "Hi! I'm DeepSeek. How can I help you code today? 💻"}]
+    st.session_state.message_log = [{"role": "ai", "content": "Hi! I'm Be My Chef. What Recipe You want me to make ? 💻"}]
 
 chat_container = st.container()
 
