@@ -93,3 +93,4 @@ if user_query:
     
     st.session_state.message_log.append({"role": "ai", "content": ai_response})
     st.rerun()
+

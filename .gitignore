@@ -6,3 +6,77 @@ __pycache__/
 _secret_auth_.json
 data/models--dark-side--ai-recipe-generator-model/
 data/.locks/
+eval\chef_Transformer_Evaluation\cache
+# Cache directories
+cache/
+**/cache/
+eval/chef_Transformer_Evaluation/cache/
+eval/RecipeNLG_Evaluation/cache/
+*.safetensors
+
+# Python cache files
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.py[cod]
+*$py.class
+
+# VS Code cache
+.vscode/
+.history/
+*.code-workspace
+
+# Jupyter Notebook cache
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Distribution/packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Logs
+*.log
+logs/
+log/
+
+# Local development settings
+.env.local
+.env.development
+.env.test
+.env.production
+
+# IDE specific (in addition to VS Code)
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Model checkpoints and large files
+*.pkl
+*.h5
+*.pth
+*.ckpt
+*.bin
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*~

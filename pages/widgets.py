@@ -270,6 +270,7 @@ class __login__:
                         "icon": "chat-dots-fill",
                     },
                     {"id": "profile", "title": "Profile", "icon": "person-circle"},
+                    {"id": "explorer", "title": "explorer", "icon": "person-circle"},
                 ]
 
                 # Get current page and index
@@ -382,13 +383,18 @@ class __login__:
                 from pages.search import render_search_content
                 render_search_content()
             elif current_view == 'chatbot':
-                from pages.chatbot import render_chatbot_content
+                from pages.explorar import render_chatbot_content
                 render_chatbot_content()
             elif current_view == 'profile':
                 from pages.profile import render_profile_page
                 render_profile_page()
                 current_user = st.session_state.get('username')
-                render_profile_page(current_user)  
+                render_profile_page(current_user) 
+            elif current_view == 'explorer':
+                from pages.explorar import main
+                main()
+                current_user = st.session_state.get('username')
+                main(current_user) 
         except Exception as e:
             st.error(f"Error loading content: {str(e)}")
 
