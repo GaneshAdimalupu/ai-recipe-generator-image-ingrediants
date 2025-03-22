@@ -382,7 +382,7 @@ class __login__:
                 from pages.search import render_search_content
                 render_search_content()
             elif current_view == 'chatbot':
-                from pages.explorar import render_chatbot_content
+                from pages.chatbot import render_chatbot_content
                 render_chatbot_content()
             elif current_view == 'profile':
                 from pages.profile import render_profile_page

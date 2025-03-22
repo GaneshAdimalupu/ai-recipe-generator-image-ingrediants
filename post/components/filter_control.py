@@ -1,3 +1,4 @@
+from httpx import get
 import streamlit as st
 from datetime import datetime, timedelta
 
@@ -53,7 +54,6 @@ def render_filter_controls():
 def render_sidebar_filters():
     """Render sidebar filters and navigation"""
     st.sidebar.markdown("### 🔍 Explore")
-    
     # Search box
     search_query = st.sidebar.text_input(
         "Search recipes...",
@@ -71,22 +71,9 @@ def render_sidebar_filters():
             if st.button(tag, use_container_width=True):
                 selected_tags.append(tag.replace("#", ""))
     
-    # Trending topics
-    st.sidebar.markdown("### 🔥 Trending Now")
-    trending_topics = [
-        "Summer Grilling",
-        "Quick Weeknight Dinners",
-        "Healthy Meal Prep",
-        "Seasonal Recipes"
-    ]
-    
-    selected_topic = None
-    for topic in trending_topics:
-        if st.sidebar.button(f"📈 {topic}", use_container_width=True):
-            selected_topic = topic
+
     
     return {
         "search_query": search_query,
         "selected_tags": selected_tags,
-        "selected_topic": selected_topic
     }

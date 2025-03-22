@@ -8,7 +8,7 @@ from post.models.db_schema import (
     posts_collection,
     bookmarks_collection
 )
-from post.styles.posts_styles import apply_styles
+from post.styles.posts_styles import apply_post_styles
 import base64
 
 def initialize_session_state():
@@ -106,7 +106,7 @@ def render_new_post_form(username):
 def render_feed(username):
     """Render the main social feed with all posts"""
     # Apply styles
-    apply_styles()
+    apply_post_styles()
     
     # Page title and description
     st.title("🍳 Recipe Social Feed")
