@@ -376,7 +376,7 @@ class __login__:
                 from pages.posts import render_posts_content
                 render_posts_content()
             elif current_view == 'recipe':
-                from pages.recipe import render_recipe_content
+                from pages.recipe_xplorer import render_recipe_content
                 render_recipe_content()
             elif current_view == 'search':
                 from pages.search import render_search_content
