@@ -270,7 +270,6 @@ class __login__:
                         "icon": "chat-dots-fill",
                     },
                     {"id": "profile", "title": "Profile", "icon": "person-circle"},
-                    {"id": "explorer", "title": "explorer", "icon": "person-circle"},
                 ]
 
                 # Get current page and index
@@ -390,11 +389,6 @@ class __login__:
                 render_profile_page()
                 current_user = st.session_state.get('username')
                 render_profile_page(current_user) 
-            elif current_view == 'explorer':
-                from pages.explorar import main
-                main()
-                current_user = st.session_state.get('username')
-                main(current_user) 
         except Exception as e:
             st.error(f"Error loading content: {str(e)}")
 

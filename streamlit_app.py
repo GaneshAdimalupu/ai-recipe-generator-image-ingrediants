@@ -1,4 +1,13 @@
 import streamlit as st
+import os
+import sys
+
+# Add project root to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
+
+# Disable TensorFlow logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # Page configuration
 st.set_page_config(

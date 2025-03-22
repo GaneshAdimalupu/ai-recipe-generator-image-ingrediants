@@ -41,7 +41,6 @@ def get_database():
 
         # Test the connection
         client.admin.command("ping")
-        print("Successfully connected to MongoDB!")
 
         # Connect to the specific database
         database_name = "be-my-chef-ai"

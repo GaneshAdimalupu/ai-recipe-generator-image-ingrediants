@@ -5,6 +5,7 @@ from home.styles import  load_custom_css
 from home.utils import calculate_nutrition, display_recipe_card, img_to_base64, load_lottie_url, predict_from_image
 import streamlit as st
 from utils.text_generator import load_text_generator
+from utils.gemini_recipe_helper import initialize_gemini_model, generate_recipe_from_name, parse_recipe_content
 
 # Initialize login check
 if not st.session_state.get("LOGGED_IN", False):
@@ -81,15 +82,17 @@ def render_home_content():
         with input_col1:
             input_method = st.radio(
                 "Choose your recipe generation method:",
-                ["Upload Image", "Enter Ingredients"],
+                ["Upload Image", "Enter Ingredients", "Recipe Name"],
                 horizontal=True,
-                format_func=lambda x: "📸 " + x if "Upload" in x else "🥗 " + x,
+                format_func=lambda x: "📸 " + x if "Upload" in x else "🥗 " + x if "Ingredients" in x else "📝 " + x,
             )
 
         if input_method == "Upload Image":
             render_image_upload_section()
-        else:
+        elif input_method == "Enter Ingredients":
             render_ingredient_input_section()
+        else:
+            render_recipe_name_section()
 
     # Nutrition Analysis Tab
     with tabs[1]:
@@ -99,6 +102,180 @@ def render_home_content():
     with tabs[2]:
         render_meal_planning()
 
+def render_recipe_name_section():
+    """Render the section for generating recipes by name using Gemini API"""
+    st.markdown('<div class="recipe-name-section">', unsafe_allow_html=True)
+    
+    # Recipe name input
+    recipe_name = st.text_input(
+        "🍽️ Enter the name of the recipe you want to create",
+        placeholder="e.g., Chocolate Lava Cake, Butter Chicken, Vegan Lasagna",
+        help="Be specific about the recipe you want to generate"
+    )
+    
+    # Dietary preferences or restrictions
+    dietary_options = st.multiselect(
+        "Any dietary preferences or restrictions?",
+        ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Low-Carb", "Keto", "Paleo"]
+    )
+    
+    # Cuisine type (optional)
+    cuisine_type = st.selectbox(
+        "Cuisine type (optional)",
+        ["Any", "Italian", "Mexican", "Indian", "Chinese", "Japanese", "American", "Mediterranean", "Thai", "French"]
+    )
+    
+    # Difficulty level
+    difficulty = st.select_slider(
+        "Difficulty level",
+        options=["Beginner", "Intermediate", "Advanced"],
+        value="Intermediate"
+    )
+    
+    if st.button("🪄 Generate Recipe", type="primary", use_container_width=True):
+        if not recipe_name:
+            st.error("Please enter a recipe name!")
+            return
+            
+        with st.spinner("✨ Creating your recipe masterpiece..."):
+            # Prepare the prompt for Gemini API
+            prompt = f"Create a detailed recipe for '{recipe_name}'"
+            
+            if dietary_options:
+                prompt += f" that is {', '.join(dietary_options)}"
+                
+            if cuisine_type != "Any":
+                prompt += f" in {cuisine_type} cuisine style"
+                
+            prompt += f". The recipe should be {difficulty} level difficulty."
+            prompt += " Include a title, ingredients list with measurements, step-by-step instructions, cooking time, preparation time, and comprehensive nutritional information (calories, protein, carbs, fats, etc.)."
+            
+            # Call the Gemini API to generate the recipe
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                from langchain_core.output_parsers import StrOutputParser
+                
+                # Get the Google API key from Streamlit secrets
+                google_api_key = st.secrets["mongo"]["API_KEY"]
+                
+                # Initialize the Gemini model
+                llm = ChatGoogleGenerativeAI(
+                    model="gemini-1.5-pro",
+                    google_api_key=google_api_key,
+                    temperature=0.7
+                )
+                
+                # Generate the recipe
+                response = llm.invoke(prompt)
+                recipe_text = response.content
+                
+                # Parse the generated recipe text
+                # This is a simplified parser - you might need to adjust based on Gemini's output format
+                try:
+                    # Extract title, ingredients, and instructions
+                    title_match = re.search(r"#+\s*(.*?)\n", recipe_text)
+                    title = title_match.group(1) if title_match else recipe_name
+                    
+                    # Extract ingredients section
+                    ingredients_section = re.search(r"(?:Ingredients|INGREDIENTS):(.*?)(?:Instructions|INSTRUCTIONS|Directions|DIRECTIONS|Steps|STEPS)", recipe_text, re.DOTALL)
+                    ingredients_text = ingredients_section.group(1) if ingredients_section else ""
+                    ingredients = [ing.strip() for ing in re.findall(r"[-•*]\s*(.*?)(?:\n|$)", ingredients_text) if ing.strip()]
+                    
+                    if not ingredients:  # Try another pattern if the first doesn't work
+                        ingredients = [ing.strip() for ing in ingredients_text.split('\n') if ing.strip()]
+                    
+                    # Extract directions section
+                    directions_section = re.search(r"(?:Instructions|INSTRUCTIONS|Directions|DIRECTIONS|Steps|STEPS):(.*?)(?:Nutrition|NUTRITION|Notes|NOTES|$)", recipe_text, re.DOTALL)
+                    directions_text = directions_section.group(1) if directions_section else ""
+                    directions = [step.strip() for step in re.findall(r"\d+\.\s*(.*?)(?:\n|$)", directions_text) if step.strip()]
+                    
+                    if not directions:  # Try another pattern if the first doesn't work
+                        directions = [step.strip() for step in directions_text.split('\n') if step.strip() and not step.strip().startswith('#')]
+                    
+                    # Extract nutrition information
+                    nutrition_section = re.search(r"(?:Nutrition|NUTRITION|Nutritional Information):(.*?)(?:$)", recipe_text, re.DOTALL)
+                    nutrition_text = nutrition_section.group(1) if nutrition_section else ""
+                    
+                    # Calculate nutrition with either parsed values or from ingredients
+                    try:
+                        nutrition = calculate_nutrition(ingredients)
+                    except:
+                        # Default nutrition if calculation fails
+                        nutrition = {
+                            "calories": "N/A", 
+                            "protein": "N/A", 
+                            "carbs": "N/A", 
+                            "fat": "N/A"
+                        }
+                    
+                    # Create two columns
+                    col1, col2 = st.columns([2, 1])
+                    
+                    with col1:
+                        st.markdown("### Your Recipe is Ready!")
+                        st.markdown(f"## {title}")
+                        
+                        st.markdown("### Ingredients")
+                        for ing in ingredients:
+                            st.markdown(f"- {ing}")
+                        
+                        st.markdown("### Instructions")
+                        for i, step in enumerate(directions, 1):
+                            st.markdown(f"{i}. {step}")
+                    
+                    with col2:
+                        # Show nutrition info
+                        st.markdown("### Nutrition Facts")
+                        for nutrient, value in nutrition.items():
+                            st.metric(nutrient.capitalize(), f"{value}g" if isinstance(value, (int, float)) else value)
+                        
+                        # Add additional recipe metadata
+                        st.markdown("### Recipe Details")
+                        cuisine_display = cuisine_type if cuisine_type != "Any" else "Various"
+                        st.markdown(f"**Cuisine:** {cuisine_display}")
+                        st.markdown(f"**Difficulty:** {difficulty}")
+                        if dietary_options:
+                            st.markdown(f"**Dietary:** {', '.join(dietary_options)}")
+                        
+                        # Show save button
+                        if st.button("📥 Save Recipe", key="save_recipe_name"):
+                            st.success("Recipe saved successfully!")
+                        
+                        # Download button
+                        recipe_download_text = f"""
+                        {title}
+
+                        Ingredients:
+                        {chr(10).join(['- ' + ing for ing in ingredients])}
+
+                        Instructions:
+                        {chr(10).join([f'{i+1}. {step}' for i, step in enumerate(directions)])}
+                        
+                        Nutritional Information:
+                        {nutrition_text}
+                        """
+                        
+                        safe_title = "".join(x for x in title if x.isalnum() or x in [" ", "-", "_"])
+                        filename = f"{safe_title.lower().replace(' ', '_')}_recipe.txt"
+
+                        st.download_button(
+                            label="📥 Download Recipe",
+                            data=recipe_download_text,
+                            file_name=filename,
+                            mime="text/plain",
+                        )
+                
+                except Exception as e:
+                    # If parsing fails, show the raw recipe text
+                    st.markdown("### Your Generated Recipe")
+                    st.markdown(recipe_text)
+                    st.error(f"Note: Couldn't parse the recipe structure automatically. Showing raw output.")
+            
+            except Exception as e:
+                st.error(f"Error generating recipe: {str(e)}")
+                st.error("Please check your API key or try again later.")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
 
 def render_image_upload_section():
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
