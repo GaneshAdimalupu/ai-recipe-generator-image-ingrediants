@@ -80,3 +80,5 @@ tmp/
 temp/
 *.tmp
 *~
+
+*.streamlit/
