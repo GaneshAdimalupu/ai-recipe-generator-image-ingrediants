@@ -4,6 +4,8 @@ from streamlit_lottie import st_lottie
 from streamlit_option_menu import option_menu
 from streamlit_cookies_manager import EncryptedCookieManager
 import os
+
+from pages.profile import get_profile_picture, render_profile_page
 from .utils import (
     check_usr_pass,
     load_lottieurl,
@@ -250,10 +252,43 @@ class __login__:
     def nav_sidebar(self):
         """Creates the side navigation bar that persists across pages."""
         with st.sidebar:
-            st.markdown('<h1 class="sidebar-title">💎 Be My Chef AI</h1>', unsafe_allow_html=True)
-            st.write("AI-Powered Recipe Assistance")
 
             if st.session_state["LOGGED_IN"]:
+                # Get username from cookies
+                username = self.get_username()
+                
+                # User profile section at the top of sidebar
+                st.markdown("---")
+                col1, col2 = st.columns([1, 3])
+                
+                with col1:
+                     # Check if user has a profile picture in database
+                    profile_pic = get_profile_picture(username)
+                    
+                    if profile_pic:
+                        # Display the user's profile picture from database
+                        st.markdown(f"""
+                            <div class="profile-picture-container">
+                                <img src="data:image/jpeg;base64,{profile_pic}" class="profile-picture" alt="Profile Picture">
+                            </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        # Display avatar from dicebear as fallback
+                        st.image(
+                            f"https://api.dicebear.com/6.x/avataaars/svg?seed={username}",
+                            width=150,
+                            caption="Default Profile Picture"
+                        )
+                
+                with col2:
+                    # Display username and link to profile
+                    st.markdown(f"### {username}")
+                    if st.button("View Profile", key="view_profile_button", use_container_width=True):
+                        st.session_state.current_view = 'profile'
+                        st.switch_page("pages/profile.py")
+                
+                st.markdown("---")
+
                 # Initialize current view if not exists
                 if 'current_view' not in st.session_state:
                     st.session_state.current_view = 'home'
@@ -320,7 +355,7 @@ class __login__:
                 st.markdown("---")
                 if st.button("🔒 Logout", key="logout", use_container_width=True):
                     self.handle_logout()
-
+                
             else:
                 # Login-related navigation
                 selected = option_menu(
@@ -353,7 +388,7 @@ class __login__:
                     }
                 )
 
-            return selected
+                return selected
 
     def render_page_content(self):
         """Renders the content for the current view"""

@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 from pages.widgets import __login__
-from styles.recipe_styles import apply_recipe_styles
-from components.recipe_card import render_recipe_card
+from xplorer.recipe_styles import apply_recipe_styles
+from xplorer.recipe_card import render_recipe_card
 from utils.recipe_helpers import (
     load_recipe_data,
     filter_recipes,
