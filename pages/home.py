@@ -1,30 +1,16 @@
 import time
-from click import prompt
 from components.logo import add_logo_with_rotating_text
-from home.styles import  load_custom_css
-from home.utils import calculate_nutrition, display_recipe_card, img_to_base64, load_lottie_url, predict_from_image
+from home.styles import load_custom_css
+from home.utils import display_recipe_card, load_lottie_url, predict_from_image
 import streamlit as st
-from utils.text_generator import load_text_generator
-from utils.gemini_recipe_helper import initialize_gemini_model, generate_recipe_from_name, parse_recipe_content
-
-# Initialize login check
-if not st.session_state.get("LOGGED_IN", False):
-    st.switch_page("streamlit_app.py")
-
-import os
-import numpy as np
-from pages.widgets import __login__
-import plotly.express as px
-from streamlit_lottie import st_lottie
-from Foodimg2Ing.output import output
+from utils.text_generator import load_text_generator, chef_top, chef_beam
 from chef_transformer.examples import EXAMPLES
-from chef_transformer import dummy, meta
-import os
-import re
+from chef_transformer import meta
 from utils.utils import pure_comma_separation
-import json
-import streamlit.components.v1 as components
+from streamlit_lottie import st_lottie
 
+# Import nutrition and meal planning functions
+from home.nutrition_meal import analyze_ingredients_nutrition, render_nutrition_analysis_main, render_meal_planning_main
 
 # Initialize login check
 if not st.session_state.get("LOGGED_IN", False):
@@ -49,7 +35,6 @@ def format_recipe_for_streaming(recipe):
     ingredients = "## Ingredients\n" + "\n".join([f"* {ing}" for ing in recipe['ingredients']]) + "\n\n"
     directions = "## Instructions\n" + "\n".join([f"{i+1}. {step}" for i, step in enumerate(recipe['directions'])])
     return title + ingredients + directions
-
 
 def render_home_content():
     # Load custom CSS
@@ -153,7 +138,6 @@ def render_recipe_name_section():
             # Call the Gemini API to generate the recipe
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
-                from langchain_core.output_parsers import StrOutputParser
                 
                 # Get the Google API key from Streamlit secrets
                 google_api_key = st.secrets["mongo"]["API_KEY"]
@@ -170,8 +154,8 @@ def render_recipe_name_section():
                 recipe_text = response.content
                 
                 # Parse the generated recipe text
-                # This is a simplified parser - you might need to adjust based on Gemini's output format
                 try:
+                    import re
                     # Extract title, ingredients, and instructions
                     title_match = re.search(r"#+\s*(.*?)\n", recipe_text)
                     title = title_match.group(1) if title_match else recipe_name
@@ -198,7 +182,7 @@ def render_recipe_name_section():
                     
                     # Calculate nutrition with either parsed values or from ingredients
                     try:
-                        nutrition = calculate_nutrition(ingredients)
+                        nutrition = analyze_ingredients_nutrition(ingredients)
                     except:
                         # Default nutrition if calculation fails
                         nutrition = {
@@ -296,9 +280,6 @@ def render_image_upload_section():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-from utils.text_generator import chef_top, chef_beam, load_text_generator
-
-
 def render_ingredient_input_section():
     st.markdown('<div class="ingredient-input-section">', unsafe_allow_html=True)
     chef_col1, chef_col2 = st.columns([2, 1])
@@ -340,7 +321,7 @@ def render_ingredient_input_section():
             recipe = generator.generate(clean_items, generation_params)
 
             if recipe:
-                nutrition = calculate_nutrition(recipe["ingredients"])
+                nutrition = analyze_ingredients_nutrition(recipe["ingredients"])
                 # Create two columns
                 col1, col2 = st.columns([2, 1])
                 
@@ -362,69 +343,15 @@ def render_ingredient_input_section():
             else:
                 st.error("Failed to generate recipe. Please try again.")
 
-
 def render_nutrition_analysis():
-    st.markdown("### 📊 Nutrition Analysis")
-    selected_ingredients = st.multiselect(
-        "Select ingredients to analyze:",
-        ["Chicken", "Rice", "Vegetables", "Fish", "Beef", "Pasta"],
-    )
-
-    if selected_ingredients:
-        nutrition = calculate_nutrition(selected_ingredients)
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("<div class='nutrition-card'>", unsafe_allow_html=True)
-            for nutrient, value in nutrition.items():
-                st.metric(nutrient.capitalize(), f"{value}g")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        with col2:
-            st.markdown("<div class='nutrition-card'>", unsafe_allow_html=True)
-            fig = px.pie(
-                values=list(nutrition.values()),
-                names=list(nutrition.keys()),
-                title="Nutritional Breakdown",
-                hole=0.3,
-            )
-            st.plotly_chart(fig)
-            st.markdown("</div>", unsafe_allow_html=True)
-
+    """Render nutrition analysis tab"""
+    # Call the enhanced implementation
+    render_nutrition_analysis_main()
 
 def render_meal_planning():
-    st.markdown("### 📅 Weekly Meal Planner")
-    days = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ]
-    meals = ["Breakfast", "Lunch", "Dinner"]
-
-    st.markdown("<div class='input-section'>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_day = st.selectbox("Select day:", days)
-    with col2:
-        selected_meal = st.selectbox("Select meal:", meals)
-
-    if st.button("🔮 Generate meal suggestion", use_container_width=True):
-        with st.spinner("Planning your meal..."):
-            generator = load_text_generator()
-            recipe = generator.generate("healthy " + selected_meal.lower(), {})
-            if recipe:
-                nutrition = calculate_nutrition(recipe["ingredients"])
-                display_recipe_card(
-                    recipe["title"],
-                    recipe["ingredients"],
-                    recipe["directions"],
-                    nutrition,
-                )
-
+    """Render meal planning tab"""
+    # Call the enhanced implementation
+    render_meal_planning_main()
 
 def handle_recipe_generation(title, ingredients, recipe, image_path):
     if not ingredients:
@@ -435,7 +362,7 @@ def handle_recipe_generation(title, ingredients, recipe, image_path):
         st.warning("No recipe steps detected. Generating basic steps...")
         recipe = ["Prepare ingredients", "Cook according to preference"]
 
-    nutrition = calculate_nutrition(ingredients)
+    nutrition = analyze_ingredients_nutrition(ingredients)
 
     if image_path:
         st.image(image_path, use_container_width=True)
@@ -460,7 +387,6 @@ def handle_recipe_generation(title, ingredients, recipe, image_path):
         file_name=filename,
         mime="text/plain",
     )
-
 
 if __name__ == "__main__":
     # Check login state

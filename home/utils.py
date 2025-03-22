@@ -1,17 +1,15 @@
 import base64
-import numpy as np
 import requests
 import plotly.express as px
 import streamlit as st
-from pathlib import Path
 import os
-
+from PIL import Image
+from io import BytesIO
 
 def img_to_base64(img_path):
     """Convert image file to base64 string"""
     with open(img_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode()
-
 
 def load_lottie_url(url: str):
     """Load and return Lottie animation from URL"""
@@ -19,18 +17,6 @@ def load_lottie_url(url: str):
     if r.status_code != 200:
         return None
     return r.json()
-
-
-def calculate_nutrition(ingredients):
-    """Calculate mock nutrition facts for given ingredients"""
-    return {
-        "calories": np.random.randint(200, 800),
-        "protein": np.random.randint(10, 30),
-        "carbs": np.random.randint(20, 60),
-        "fat": np.random.randint(10, 40),
-        "fiber": np.random.randint(2, 8),
-    }
-
 
 def check_dietary_restrictions(ingredients, restrictions):
     """Check ingredients against dietary restrictions"""
@@ -40,7 +26,6 @@ def check_dietary_restrictions(ingredients, restrictions):
             if restriction.lower() in ingredient.lower():
                 restricted_ingredients.append(f"{ingredient} (contains {restriction})")
     return restricted_ingredients
-
 
 def predict_from_image(uploaded_file):
     """Process uploaded image and generate recipe"""
@@ -92,7 +77,6 @@ def predict_from_image(uploaded_file):
         st.error(f"Error saving image: {str(e)}")
         return None, None, None, None
 
-
 def display_recipe_card(title, ingredients, instructions, nutrition, image_path=None):
     """Display recipe information in an enhanced, aesthetic card format"""
     # Main recipe card container
@@ -117,7 +101,7 @@ def display_recipe_card(title, ingredients, instructions, nutrition, image_path=
         metric_cols = st.columns(3)
         for idx, (nutrient, value) in enumerate(nutrition.items()):
             with metric_cols[idx % 3]:
-                st.metric(nutrient.capitalize(), f"{value}g")
+                st.metric(nutrient.capitalize(), f"{value}g" if isinstance(value, (int, float)) else value)
 
         # Interactive nutrition chart
         fig = px.pie(
@@ -159,3 +143,36 @@ def display_recipe_card(title, ingredients, instructions, nutrition, image_path=
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+def load_image_from_url(url, target_size=None):
+    """Load an image from a URL"""
+    try:
+        response = requests.get(url, timeout=10)
+        img = Image.open(BytesIO(response.content))
+        
+        if target_size:
+            img = img.resize(target_size)
+        
+        return img
+    except Exception as e:
+        st.error(f"Error loading image: {str(e)}")
+        return None
+
+def load_local_image(path, target_size=None):
+    """Load an image from a local path"""
+    try:
+        img = Image.open(path)
+        
+        if target_size:
+            img = img.resize(target_size)
+        
+        return img
+    except Exception as e:
+        st.error(f"Error loading image: {str(e)}")
+        return None
+
+def image_to_base64(img):
+    """Convert a PIL image to base64 encoded string"""
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
