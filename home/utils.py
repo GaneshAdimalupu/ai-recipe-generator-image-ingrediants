@@ -1,4 +1,5 @@
 import base64
+import numpy as np
 import requests
 import plotly.express as px
 import streamlit as st
@@ -26,6 +27,18 @@ def check_dietary_restrictions(ingredients, restrictions):
             if restriction.lower() in ingredient.lower():
                 restricted_ingredients.append(f"{ingredient} (contains {restriction})")
     return restricted_ingredients
+
+def calculate_nutrition(ingredients):
+    """Calculate mock nutrition facts for given ingredients"""
+    return {
+        "calories": np.random.randint(200, 800),
+        "protein": np.random.randint(10, 30),
+        "carbs": np.random.randint(20, 60),
+        "fat": np.random.randint(10, 40),
+        "fiber": np.random.randint(2, 8),
+    }
+
+
 
 def predict_from_image(uploaded_file):
     """Process uploaded image and generate recipe"""
