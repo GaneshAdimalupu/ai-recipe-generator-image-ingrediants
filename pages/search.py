@@ -5,7 +5,6 @@ from pages.widgets import __login__
 import requests
 from bs4 import BeautifulSoup
 import random
-import time
 
 # Initialize login check
 if not st.session_state.get("LOGGED_IN", False):

@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.recipe_helpers import (
+from xplorer.recipe_helpers import (
     parse_ingredients,
     parse_instructions,
     is_recipe_saved,

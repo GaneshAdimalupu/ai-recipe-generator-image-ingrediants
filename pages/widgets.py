@@ -297,7 +297,7 @@ class __login__:
                 menu_items = [
                     {"id": "home", "title": "Recipe AI Model", "icon": "house-fill"},
                     {"id": "posts", "title": "Community Feed", "icon": "people-fill"},
-                    {"id": "recipe", "title": "Recipe Explorer", "icon": "book"},
+                    {"id": "recipe_xplorer", "title": "Recipe Explorer", "icon": "book"},
                     {"id": "search", "title": "Recipe Search", "icon": "search"},
                     {
                         "id": "chatbot",
