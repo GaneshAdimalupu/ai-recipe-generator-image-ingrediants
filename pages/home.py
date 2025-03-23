@@ -503,10 +503,32 @@ def render_recipe_name_section():
     )
     
     # Cuisine type (optional)
-    cuisine_type = st.selectbox(
-        "Cuisine type (optional)",
-        ["Any", "Italian", "Mexican", "Indian", "Chinese", "Japanese", "American", "Mediterranean", "Thai", "French"]
+    cuisine_options = ["Any", "Italian", "Mexican", "Indian", "Chinese", "Japanese", "American", "Mediterranean", "Thai", "French", "Korean", 
+                       "Bengali/Bangladeshi", "Kerala", "Lebanese", "Spanish", "Turkish", "Vietnamese", "Ethiopian", "Cajun/Creole", "Caribbean"]
+    
+    cuisine_selection = st.radio(
+        "Choose cuisine style:",
+        ["Common cuisines", "Regional Indian", "Other"],
+        horizontal=True,
+        help="Select the culinary tradition for your recipe"
     )
+    
+    if cuisine_selection == "Common cuisines":
+        cuisine_type = st.selectbox(
+            "Cuisine type:",
+            cuisine_options
+        )
+    elif cuisine_selection == "Regional Indian":
+        cuisine_type = st.selectbox(
+            "Regional Indian style:",
+            ["Any Indian", "North Indian", "South Indian", "Bengali", "Punjabi", "Gujarati", "Kerala", "Goan", "Kashmiri", "Rajasthani", "Mughlai"]
+        )
+    else:
+        cuisine_type = st.text_input(
+            "Enter specific cuisine or style:",
+            placeholder="e.g., Afghan, Nigerian, Peruvian, etc."
+        )
+    
     
     # Difficulty level
     difficulty = st.select_slider(
@@ -571,8 +593,12 @@ Make sure each variation has different ingredients or techniques. Provide reason
             if dietary_options:
                 prompt += f"\nEach recipe must be {', '.join(dietary_options)}."
                 
-            if cuisine_type != "Any":
-                prompt += f"\nEach recipe should be prepared in {cuisine_type} cuisine style."
+            # Add cuisine type specifications to the prompt
+            if cuisine_selection == "Regional Indian":
+                prompt += f"\n\nI want all recipe variations to be authentic {cuisine_type} style dishes. Use traditional ingredients, cooking methods, and spices from this specific cuisine."
+            elif cuisine_type and cuisine_type != "Any":
+                prompt += f"\n\nI want all recipe variations to be authentic {cuisine_type} cuisine. Use traditional ingredients, cooking methods, and spices from this specific cuisine."
+            
                 
             prompt += f"\nAll recipes should be suitable for {difficulty} level home cooks."
             
