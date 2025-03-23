@@ -18,6 +18,8 @@ def apply_recipe_styles():
             --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
             --transition-speed: 0.3s;
             --primary-color-rgb: 255, 75, 75;
+            --light-purple: #E6E6FA;  
+
         }
 
         .page-title {
@@ -64,7 +66,7 @@ def apply_recipe_styles():
 
         /* Recipe Card Styles */
         .recipe-card {
-            background-color: var(--card-bg);
+            background-color: var(--light-purple);
             border-radius: 16px;
             padding: 24px;
             margin: 20px 0;
@@ -72,6 +74,8 @@ def apply_recipe_styles():
             transition: all var(--transition-speed) ease;
             animation: cardEntrance 0.5s ease-out;
             border: 1px solid var(--border-color);
+            color: #000;
+
         }
 
         .recipe-card:hover {
@@ -102,6 +106,8 @@ def apply_recipe_styles():
             align-items: center;
             gap: 0.5rem;
             transition: all 0.3s ease;
+            # color: #000;
+
         }
 
         .info-tag:hover {
